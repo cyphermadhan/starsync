@@ -1,27 +1,21 @@
 name = "starsync"
 compatibility_date = "2026-01-01"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = "./dist"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "starsync-db"
 database_id = "4fb75c3c-52b9-449b-9801-20d38f6c2b39"
 
-# Cloudflare Pages projects do NOT support Cron Triggers or being a Queue
-# consumer (Workers-only features) — confirmed when `wrangler pages` config
-# validation rejected both. The daily-send pipeline (cron that queries D1
-# every 15 min + a queue consumer that calls Claude/sends email) will live in
-# its own separate Worker (its own wrangler.toml, deployed via `wrangler
-# deploy`, not `wrangler pages deploy`), sharing this same D1 database. Not
-# built yet — see plan.md roadmap.
-#
-# Queues already created on Cloudflare and ready for that future worker:
-#   starsync-daily-send (main), starsync-daily-send-dlq (dead-letter)
+# The daily-send pipeline (cron that queries D1 every 15 min + a queue
+# consumer that calls Claude/sends email) is not built yet — see plan.md.
+# Workers (unlike the now-unsupported Pages) can host Cron Triggers and
+# Queue consumers directly in this same project when that's built:
+#   starsync-daily-send (main queue), starsync-daily-send-dlq (dead-letter)
 
-# Secrets (set with `wrangler pages secret put <NAME> --project-name starsync`,
-# never committed): ENCRYPTION_KEY (done), RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET,
-# RAZORPAY_WEBHOOK_SECRET, RAZORPAY_PLAN_ID, RESEND_API_KEY, ANTHROPIC_API_KEY
+# Secrets (set with `wrangler secret put <NAME>`, never committed):
+# ENCRYPTION_KEY, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET,
+# RAZORPAY_PLAN_ID, RESEND_API_KEY, ANTHROPIC_API_KEY
 #
 # Rasi/Nakshatra are computed in-process (src/lib/vedic.ts) — no astrology
 # API or key needed.

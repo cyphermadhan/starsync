@@ -6,3 +6,4 @@ dist/
 .env
 *.log
 .claude/
+worker-configuration.d.ts

@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
 import { cancelSubscription } from '../../lib/razorpay';
 
-export const GET: APIRoute = async ({ url, locals, redirect }) => {
-  const env = locals.runtime.env;
+export const GET: APIRoute = async ({ url, redirect }) => {
   const token = url.searchParams.get('token');
 
   if (!token) {

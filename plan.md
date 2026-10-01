@@ -1,7 +1,7 @@
 # Plan: StarSync — Daily Vedic Astrology Product for Gen-Z/IT Professionals
 
 **Date:** 2026-09-30
-**Status:** Updated — 2026-10-01 (v3 — full UI redesign, see Design direction below)
+**Status:** Updated — 2026-10-01 (v4 — migrated hosting from Cloudflare Pages to Cloudflare Workers)
 
 ## Context
 
@@ -25,9 +25,33 @@ Technical feasibility research (completed) resolved three open architecture ques
 
 ## Architecture
 
-**Single Cloudflare project, one repo:** Astro with the `@astrojs/cloudflare` adapter, deployed as one
-Cloudflare Pages project. Astro server endpoints act as the API (no separate Workers project needed),
-bound to D1, a Queue, and secrets.
+**Single Cloudflare Worker, one repo:** Astro with the `@astrojs/cloudflare` adapter (v14+), deployed
+as a Cloudflare **Worker with static assets** — not Pages. Originally built on Cloudflare Pages, but
+migrated 2026-10-01 after discovering the hard way that `@astrojs/cloudflare` v13+ dropped Pages
+support entirely (confirmed in Astro's own docs: "Removed: Cloudflare Pages support... migrate to
+Cloudflare Workers"). The symptom was a production-only `[object Object]` response on every page —
+the build was generating a reserved `ASSETS` binding name that Pages rejects outright. Workers
+actually resolves an earlier limitation too: unlike Pages, Workers natively support Cron Triggers and
+Queue consumers, so the still-unbuilt daily-send pipeline can live in this same project later instead
+of needing a separate one.
+
+Deployment model: `npm run build` (runs `wrangler types`, `astro check`, `astro build`) produces
+`dist/server/` (worker code + its own generated `wrangler.json` with the right relative paths) and
+`dist/client/` (static assets). Deploy by running `wrangler deploy` from inside `dist/server/` — our
+root `wrangler.toml` only carries bindings (D1) and compatibility settings; it deliberately does not
+declare `main`/`[assets]` itself, since those must point at build output that doesn't exist until
+after the build runs (declaring them at the root caused a chicken-and-egg Vite config error).
+
+Live: `starsync.familyfirstapps.com` → Worker `starsync` → `starsync.maddy-ax.workers.dev`.
+Bindings: `DB` (D1, `starsync-db`), `ASSETS` (static files), `SESSION` (KV, auto-provisioned by
+`wrangler deploy` — Workers can do this; Pages couldn't, which is why that binding warning had been
+showing since the very first session on this project and was never actually resolved until now).
+
+`Astro.locals.runtime.env` is also removed as of this adapter version — migrated `signup.ts` and
+`unsubscribe.ts` to `import { env } from 'cloudflare:workers'` instead. Env typing now comes from
+`wrangler types` (generates `worker-configuration.d.ts`, gitignored, regenerated via the `build`/`dev`
+scripts) rather than the hand-written `Env` type + `App.Locals` declaration `src/env.d.ts` used to
+have.
 
 - **Frontend:** Astro + plain CSS.
 - **DB:** Cloudflare D1 (`db/schema.sql`).
@@ -64,7 +88,11 @@ bound to D1, a Queue, and secrets.
 - **Scheduling (not built this pass):** One Cloudflare Cron Trigger (every 15 min, requires the
   Workers **Paid** plan — Free plan's 10ms CPU budget can't support this) queries D1 for subscribers
   whose UTC-normalized send-minute matches, pushes IDs onto a Cloudflare Queue; a separate consumer
-  Worker does the Claude call + email send per user, with retries + a dead-letter queue.
+  does the Claude call + email send per user, with retries + a dead-letter queue. Now that hosting is
+  on Workers (not Pages), this can be added directly to this same `wrangler.toml`/project — Workers
+  support Cron Triggers and Queue consumers natively; Pages never did. Queues already created on
+  Cloudflare and ready to wire up: `starsync-daily-send` (main), `starsync-daily-send-dlq`
+  (dead-letter).
 - **Content generation (not built this pass):** Claude (Haiku 4.5 for cost at scale; Sonnet 5 as a
   quality upgrade option), prompted with rasi/nakshatra + role/profession + date — no raw birth data,
   no per-day astrology API call.
@@ -128,23 +156,29 @@ visual QA (stacking bugs, dropdown arrow padding, consent-label wrapping, button
 
 ## What's built vs. what's still open
 
-Built this pass (no external accounts needed — the astrology + geocoding pipeline needs zero keys and
-is fully runnable today; only Razorpay/Cloudflare credentials are still needed to run signup
-end-to-end):
-1. Astro project scaffold, `wrangler.toml` (D1 + Queue bindings declared, not yet provisioned).
+**Live now:** `starsync.familyfirstapps.com` serves the real site from the Cloudflare Worker
+`starsync`. D1 (`starsync-db`, schema applied), the `ASSETS` binding, and a `SESSION` KV namespace
+(auto-provisioned) are all wired up. `ENCRYPTION_KEY` is set as a Worker secret. The old Pages project
+is retired (custom domain detached; not yet deleted, kept briefly as a fallback).
+
+Built and verified:
+1. Astro project on `@astrojs/cloudflare` v14 / Astro v7, Workers deployment model.
 2. Onboarding page — single page, all requested fields, trial/pricing copy, privacy trust line.
 3. Privacy page — plain-language, names every third party that touches data and why.
 4. Unsubscribe confirmation page.
-5. `db/schema.sql`, `.dev.vars.example` listing every secret needed.
+5. `db/schema.sql` applied to the live D1 database; `.dev.vars.example` listing every secret needed.
 6. `/api/signup` and `/api/unsubscribe` — real, complete logic: encryption, geocoding, in-process
-   Vedic chart calculation (no API key required, verified against `astronomia`'s Meeus-algorithm moon
-   position with a manual sanity check), Razorpay customer/subscription creation, D1 writes.
+   Vedic chart calculation (no API key required), Razorpay customer/subscription creation, D1 writes —
+   confirmed reaching the real D1 binding in production via `cloudflare:workers`'s `env` import.
 
-Not built this pass (external accounts/infra required first):
-- Cloudflare D1 database + Queue actually provisioned; DNS on `familyfirstapps.com`.
+Not built yet (external accounts/infra required first):
+- Razorpay account/keys — intentionally saved for last; `RAZORPAY_*` secrets not yet set.
+- Resend and Anthropic accounts/API keys.
 - Razorpay webhook handler + `billing_events` population.
-- The cron trigger + queue consumer Worker (daily send pipeline) and Resend email templates.
-- Claude prompt design/tuning for the actual daily content voice.
+- The cron trigger + queue consumer (daily send pipeline) and Resend email templates — can now live in
+  this same Worker/`wrangler.toml` since Workers support both natively.
+- GitHub-based continuous deployment — the old Pages project had this via Git integration; needs
+  redoing via Workers Builds (or just keep deploying manually via `wrangler deploy`).
 
 ## Open Questions
 

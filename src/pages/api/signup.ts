@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
 import { encryptField, generateToken, sha256Hex } from '../../lib/encryption';
 import { geocodePlaceOfBirth, toUtcDate } from '../../lib/geocoding';
 import { computeVedicChart } from '../../lib/vedic';
@@ -38,8 +39,7 @@ function sendMinuteUtc(sendTimeIst: string): number {
   return (totalMinutesIst - 5 * 60 - 30 + 1440) % 1440;
 }
 
-export const POST: APIRoute = async ({ request, locals }) => {
-  const env = locals.runtime.env;
+export const POST: APIRoute = async ({ request }) => {
   const payload = (await request.json().catch(() => ({}))) as Partial<SignupPayload>;
 
   const validationError = validate(payload);
