@@ -4,6 +4,8 @@
 // charge only happens once the trial ends (see plan.md for the UPI Autopay
 // mandate-registration-charge caveat to confirm in your dashboard).
 
+import { timingSafeEqual } from 'node:crypto';
+
 const API_BASE = 'https://api.razorpay.com/v1';
 
 function authHeader(keyId: string, keySecret: string): string {
@@ -102,5 +104,11 @@ export async function verifyWebhookSignature(
   const expected = Array.from(new Uint8Array(mac))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
-  return expected === signatureHeader;
+
+  // Plain === leaks timing information byte-by-byte; a constant-time
+  // compare is the standard defense for anything checking a signature.
+  const expectedBuf = Buffer.from(expected, 'utf8');
+  const actualBuf = Buffer.from(signatureHeader, 'utf8');
+  if (expectedBuf.length !== actualBuf.length) return false;
+  return timingSafeEqual(expectedBuf, actualBuf);
 }
