@@ -1,6 +1,6 @@
 import { decryptField } from './encryption';
-import { generateReading } from './openai';
-import { sendReadingEmail } from './resend';
+import { generateDailyContent } from './openai';
+import { sendDailyEmail } from './resend';
 
 interface QueueMessage {
   subscriberId: string;
@@ -19,6 +19,14 @@ interface SubscriberRow {
 
 function todayUtcDateString(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function istGreeting(now: Date): string {
+  const istHour = Number(now.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Asia/Kolkata' }));
+  if (istHour >= 5 && istHour < 12) return 'Good morning';
+  if (istHour >= 12 && istHour < 17) return 'Good afternoon';
+  if (istHour >= 17 && istHour < 21) return 'Good evening';
+  return 'Good night';
 }
 
 export default {
@@ -78,13 +86,18 @@ async function processSubscriber(subscriberId: string, env: Env): Promise<void> 
     decryptField(subscriber.role_encrypted, env.ENCRYPTION_KEY),
   ]);
 
-  const reading = await generateReading(
-    { rasi: subscriber.rasi, nakshatra: subscriber.nakshatra, pada: subscriber.pada, role, date: new Date() },
+  const now = new Date();
+  const dayOfWeek = now.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Asia/Kolkata' });
+  const dateStr = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
+  const greeting = istGreeting(now);
+
+  const content = await generateDailyContent(
+    { rasi: subscriber.rasi, nakshatra: subscriber.nakshatra, pada: subscriber.pada, role, dayOfWeek, dateStr },
     env.OPENAI_API_KEY,
   );
 
-  await sendReadingEmail(
-    { to: email, name, reading, unsubscribeToken: subscriber.unsubscribe_token },
+  await sendDailyEmail(
+    { to: email, name, dayOfWeek, dateStr, greeting, content, unsubscribeToken: subscriber.unsubscribe_token },
     env.RESEND_API_KEY,
   );
 
