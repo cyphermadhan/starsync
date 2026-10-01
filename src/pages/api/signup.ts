@@ -53,6 +53,12 @@ function sendMinuteUtc(sendTimeIst: string): number {
 }
 
 export const POST: APIRoute = async ({ request }) => {
+  const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+  const { success } = await env.SIGNUP_RATE_LIMITER.limit({ key: ip });
+  if (!success) {
+    return Response.json({ error: 'Too many signup attempts. Please try again in a minute.' }, { status: 429 });
+  }
+
   const payload = (await request.json().catch(() => ({}))) as Partial<SignupPayload>;
 
   const validationError = validate(payload);

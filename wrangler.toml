@@ -7,6 +7,14 @@ binding = "DB"
 database_name = "starsync-db"
 database_id = "4fb75c3c-52b9-449b-9801-20d38f6c2b39"
 
+# Caps /api/signup abuse from a single IP — not a secret, safe to declare
+# directly here (unlike API keys). namespace_id is just an arbitrary unique
+# id within this account, not a separately-provisioned resource.
+[[ratelimits]]
+name = "SIGNUP_RATE_LIMITER"
+namespace_id = "1001"
+simple = { limit = 5, period = 60 }
+
 # Secret names are intentionally NOT declared here as [vars] placeholders —
 # that was tried once and is actively dangerous: deploying with a [vars]
 # entry whose name matches an existing Secret overwrites that Secret with
