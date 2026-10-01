@@ -8,6 +8,19 @@ import { createCustomer, createSubscription } from '../../lib/razorpay';
 const TRIAL_DAYS = 5;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
+// Must match the signup form's <option value="..."> list exactly, and the
+// ROLE_LABELS keys in workers/daily-send/src/openai.ts — this is the only
+// thing standing between a direct API call and arbitrary text flowing
+// unescaped into the daily OpenAI prompt.
+const VALID_ROLES = new Set([
+  'engineering',
+  'product-design',
+  'data-ml',
+  'founder-business',
+  'student',
+  'not-working',
+  'other',
+]);
 
 interface SignupPayload {
   name: string;
@@ -26,7 +39,7 @@ function validate(payload: Partial<SignupPayload>): string | null {
   if (!payload.dob) return 'Date of birth is required.';
   if (!payload.tob || !TIME_RE.test(payload.tob)) return 'Time of birth is required.';
   if (!payload.pob?.trim()) return 'Place of birth is required.';
-  if (!payload.role) return 'Please pick what your day looks like.';
+  if (!payload.role || !VALID_ROLES.has(payload.role)) return 'Please pick what your day looks like.';
   if (!payload.sendTime || !TIME_RE.test(payload.sendTime)) return 'Preferred send time is required.';
   if (payload.consent !== 'on') return 'You need to agree to the Privacy Policy to continue.';
   return null;
