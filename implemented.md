@@ -1,5 +1,24 @@
 # Implementation Log
 
+## [2026-10-01] — Redesign the daily email: content structure, voice, and visuals
+
+- **What:** Rewrote the OpenAI prompt and Resend template for the daily-send worker to match a
+  detailed structural brief (hook, core energy, work & productivity, love & relationships, social
+  dynamics, do's/don'ts, closing quote; subject "Today's Sync"), then pixel-matched the visuals to
+  a Figma spec with icon assets.
+- **Files:** `workers/daily-send/src/openai.ts`, `workers/daily-send/src/resend.ts`,
+  `workers/daily-send/src/index.ts`, `public/email/*` (new icon/logo assets).
+- **Details:**
+  - Element framing (Fire/Earth/Air/Water) now glosses each trait inline instead of using bare
+    jargon the reader won't recognize.
+  - Greeting/date are now IST-aware and time-of-day specific (was hardcoded "Good morning" off UTC).
+  - Logo dark-mode handling: abandoned CSS-driven light/dark swap after confirming Gmail Android
+    ignores `prefers-color-scheme` entirely — switched to a single asset with the light/dark chip
+    baked directly into the PNG, which is correct regardless of client dark-mode support.
+  - Dropped an attempted `@font-face` embed of Google Sans Flex: Gmail (web + app) never loads
+    custom web fonts in email, confirmed against a comparable real project's own design notes.
+    Falls back to each platform's system font instead.
+
 ## [2026-09-30] — Add particle-reveal background, real logo/font, and full card redesign
 
 - **What:** Added a background photo (`public/hero-bg.webp`) with a WebGL2 "particle reveal" cursor
