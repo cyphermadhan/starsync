@@ -139,7 +139,14 @@ import Base from '../layouts/Base.astro';
       bg?.appendChild(img);
     }
 
-    if (bg && output) {
+    // The effect is a cursor-hover interaction with no real equivalent on
+    // touch — there's no persistent hover position to reveal around — and
+    // mobile browsers are also prone to repainting fixed WebGL canvases
+    // during scroll, causing a visible flicker. Skip straight to the plain
+    // image on devices with no fine hover-capable pointer (i.e. touch-only).
+    const hasHoverPointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+    if (bg && output && hasHoverPointer) {
       const image = new Image();
       image.src = '/hero-bg.webp';
       image
@@ -152,6 +159,8 @@ import Base from '../layouts/Base.astro';
           if (!instance) renderPlainFallback();
         })
         .catch(() => renderPlainFallback());
+    } else if (bg) {
+      renderPlainFallback();
     }
   </script>
 
@@ -307,6 +316,12 @@ import Base from '../layouts/Base.astro';
       position: fixed;
       inset: 0;
       z-index: 0;
+      /* Forces its own GPU compositing layer — without this, mobile Safari
+         re-lays-out fixed elements during touch-scroll momentum, briefly
+         flashing whatever's behind it (body's gradient) before repainting. */
+      will-change: transform;
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
     }
     .pr-output,
     .pr-image {
@@ -380,6 +395,19 @@ import Base from '../layouts/Base.astro';
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 16px;
+    }
+
+    @media (max-width: 560px) {
+      .card {
+        padding: 28px 20px;
+      }
+      .row {
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+      .segmented {
+        flex-wrap: wrap;
+      }
     }
 
     label {
