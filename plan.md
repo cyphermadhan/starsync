@@ -93,9 +93,16 @@ have.
   support Cron Triggers and Queue consumers natively; Pages never did. Queues already created on
   Cloudflare and ready to wire up: `starsync-daily-send` (main), `starsync-daily-send-dlq`
   (dead-letter).
-- **Content generation (not built this pass):** Claude (Haiku 4.5 for cost at scale; Sonnet 5 as a
-  quality upgrade option), prompted with rasi/nakshatra + role/profession + date — no raw birth data,
-  no per-day astrology API call.
+- **Content generation (not built this pass):** OpenAI (gpt-4o-mini-class), not Claude — switched
+  after comparing per-token pricing: for this job (short templated personality text, no reasoning/
+  tool-use needed), gpt-4o-mini-class is roughly 8x cheaper than Claude Haiku 4.5 ($0.15/$0.60 vs.
+  $1.00/$5.00 per million input/output tokens). Prompted with rasi/nakshatra + role/profession + date
+  — no raw birth data, no per-day astrology API call. `OPENAI_API_KEY` created 2026-10-01, scoped to
+  Restricted → Chat completions (/v1/chat/completions) = Request only, everything else None — the key
+  can only generate completions, nothing else (no Responses API, no Realtime, no file/image/audio
+  access). **Expires 2026-11-30 (60-day expiry) — user has a calendar reminder set for 2026-11-26 to
+  rotate it before it lapses.** If this date passes without a new key, the daily-send pipeline (once
+  built) will silently stop generating content.
 - **Transactional email (not built this pass):** Resend.
 - **Encryption:** AES-256-GCM (`src/lib/encryption.ts`). Master key in a Cloudflare secret
   (`ENCRYPTION_KEY`), random IV per field. Decrypted only transiently — once at signup, and inside the
@@ -171,14 +178,25 @@ Built and verified:
    Vedic chart calculation (no API key required), Razorpay customer/subscription creation, D1 writes —
    confirmed reaching the real D1 binding in production via `cloudflare:workers`'s `env` import.
 
+Done since:
+- `RESEND_API_KEY` and `OPENAI_API_KEY` set as Worker secrets (sending-only / chat-completions-only
+  scoped respectively — least privilege on both).
+- GitHub-based continuous deployment via **Workers Builds** (Settings → Builds on the `starsync`
+  Worker). Every push to `main` now auto-builds and deploys. One real bug surfaced and fixed along
+  the way: `wrangler types` infers secret names from `.dev.vars` locally, which doesn't exist in a
+  clean CI checkout, so the first CI build failed `astro check` with 9 missing-property errors.
+  Fixed with a hand-written `src/types/secrets.d.ts` that merges the secret names onto
+  `Cloudflare.Env` for TypeScript only — **not** via `wrangler.toml`'s `[vars]`, which was tried
+  first and is actively dangerous: deploying with a `[vars]` entry whose name matches an existing
+  Secret silently overwrites that Secret with the plain-text var value (this is exactly what
+  demoted the live `ENCRYPTION_KEY` to an empty string for a window — caught and fixed; confirmed
+  zero rows in `subscribers` during that window, so no real data was affected).
+
 Not built yet (external accounts/infra required first):
 - Razorpay account/keys — intentionally saved for last; `RAZORPAY_*` secrets not yet set.
-- Resend and Anthropic accounts/API keys.
 - Razorpay webhook handler + `billing_events` population.
 - The cron trigger + queue consumer (daily send pipeline) and Resend email templates — can now live in
   this same Worker/`wrangler.toml` since Workers support both natively.
-- GitHub-based continuous deployment — the old Pages project had this via Git integration; needs
-  redoing via Workers Builds (or just keep deploying manually via `wrangler deploy`).
 
 ## Open Questions
 

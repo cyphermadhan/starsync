@@ -1,0 +1,15 @@
+{
+  "name": "starsync-daily-send",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler types && wrangler dev",
+    "deploy": "wrangler types && wrangler deploy",
+    "check": "wrangler types && tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "wrangler": "^4.145.0"
+  }
+}

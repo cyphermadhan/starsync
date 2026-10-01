@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS subscribers (
   razorpay_customer_id TEXT,
   razorpay_subscription_id TEXT,
   unsubscribe_token TEXT NOT NULL UNIQUE,
+  last_sent_date TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

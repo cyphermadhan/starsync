@@ -1,0 +1,31 @@
+name = "starsync-daily-send"
+main = "src/index.ts"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "starsync-db"
+database_id = "4fb75c3c-52b9-449b-9801-20d38f6c2b39"
+
+[[queues.producers]]
+binding = "DAILY_SEND_QUEUE"
+queue = "starsync-daily-send"
+
+[[queues.consumers]]
+queue = "starsync-daily-send"
+max_batch_size = 10
+max_retries = 3
+dead_letter_queue = "starsync-daily-send-dlq"
+
+# Fires every 15 min; handler only queries D1 for subscribers whose
+# preferred_send_minute_utc falls in the current window and enqueues their
+# IDs — the actual OpenAI call + email send happens in the queue consumer,
+# not here, to stay well within the cron handler's CPU budget.
+[triggers]
+crons = ["*/15 * * * *"]
+
+# Secrets (set with `wrangler secret put <NAME> --name starsync-daily-send`,
+# never committed): ENCRYPTION_KEY, OPENAI_API_KEY, RESEND_API_KEY
+# (same ENCRYPTION_KEY value as the starsync Worker — needed here too, to
+# decrypt subscriber PII before generating/sending each day's reading)
