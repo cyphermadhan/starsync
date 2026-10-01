@@ -324,7 +324,7 @@ import Base from '../layouts/Base.astro';
       -webkit-transform: translateZ(0);
     }
     .pr-output,
-    .pr-image {
+    :global(.pr-image) {
       position: absolute;
       inset: 0;
       width: 100%;
@@ -332,7 +332,7 @@ import Base from '../layouts/Base.astro';
       display: block;
       border: 0;
     }
-    .pr-image {
+    :global(.pr-image) {
       object-fit: cover;
       object-position: center center;
     }
