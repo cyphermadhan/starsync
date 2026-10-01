@@ -7,6 +7,7 @@ import Base from '../layouts/Base.astro';
   hideTopbar
   hideFooter
 >
+  <link rel="preload" as="image" href="/hero-bg.webp" />
   <div class="particle-bg" id="particle-bg" aria-hidden="true" slot="background">
     <canvas id="pr-output" class="pr-output"></canvas>
   </div>
@@ -135,7 +136,7 @@ import Base from '../layouts/Base.astro';
       const img = document.createElement('img');
       img.src = '/hero-bg.webp';
       img.alt = '';
-      img.className = 'pr-image';
+      img.className = 'pr-image is-ready';
       bg?.appendChild(img);
     }
 
@@ -156,7 +157,11 @@ import Base from '../layouts/Base.astro';
             { image, output },
             { radius: 850, softness: 0.9, size: 0.3, background: '#08080d' },
           );
-          if (!instance) renderPlainFallback();
+          if (instance) {
+            output.classList.add('is-ready');
+          } else {
+            renderPlainFallback();
+          }
         })
         .catch(() => renderPlainFallback());
     } else if (bg) {
@@ -331,6 +336,11 @@ import Base from '../layouts/Base.astro';
       height: 100%;
       display: block;
       border: 0;
+      /* Starts invisible — the body's CSS gradient shows through until the
+         hero image/particle effect is actually ready to draw, then this
+         fades in instead of popping in abruptly over the gradient. */
+      opacity: 0;
+      transition: opacity 0.4s ease;
     }
     :global(.pr-image) {
       object-fit: cover;
@@ -338,6 +348,10 @@ import Base from '../layouts/Base.astro';
     }
     .pr-output {
       pointer-events: none;
+    }
+    .pr-output.is-ready,
+    :global(.pr-image.is-ready) {
+      opacity: 1;
     }
 
     .card {
