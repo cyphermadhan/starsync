@@ -7,19 +7,16 @@ binding = "DB"
 database_name = "starsync-db"
 database_id = "4fb75c3c-52b9-449b-9801-20d38f6c2b39"
 
-# Empty placeholders so `wrangler types` knows these names exist and
-# generates a complete Env type — matters in CI (Workers Builds), which
-# clones a clean checkout with no .dev.vars file to infer names from. Real
-# values are never stored here: actual Secrets (set via `wrangler secret
-# put`) always take precedence over same-named `vars` at runtime.
-[vars]
-ENCRYPTION_KEY = ""
-RAZORPAY_KEY_ID = ""
-RAZORPAY_KEY_SECRET = ""
-RAZORPAY_WEBHOOK_SECRET = ""
-RAZORPAY_PLAN_ID = ""
-RESEND_API_KEY = ""
-ANTHROPIC_API_KEY = ""
+# Secret names are intentionally NOT declared here as [vars] placeholders —
+# that was tried once and is actively dangerous: deploying with a [vars]
+# entry whose name matches an existing Secret overwrites that Secret with
+# the plain-text var value. (Found out the hard way: it silently demoted
+# ENCRYPTION_KEY from a real secret to an empty plain_text binding on the
+# very next deploy.) Secrets must never be declared in this file at all —
+# only ever set out-of-band via `wrangler secret put <NAME> --name starsync`.
+# For CI (Workers Builds) type-checking, see src/types/secrets.d.ts instead,
+# which hand-declares these names for TypeScript without touching runtime
+# bindings in any way.
 
 # The daily-send pipeline (cron that queries D1 every 15 min + a queue
 # consumer that calls Claude/sends email) is not built yet — see plan.md.
