@@ -7,6 +7,20 @@ binding = "DB"
 database_name = "starsync-db"
 database_id = "4fb75c3c-52b9-449b-9801-20d38f6c2b39"
 
+# Empty placeholders so `wrangler types` knows these names exist and
+# generates a complete Env type — matters in CI (Workers Builds), which
+# clones a clean checkout with no .dev.vars file to infer names from. Real
+# values are never stored here: actual Secrets (set via `wrangler secret
+# put`) always take precedence over same-named `vars` at runtime.
+[vars]
+ENCRYPTION_KEY = ""
+RAZORPAY_KEY_ID = ""
+RAZORPAY_KEY_SECRET = ""
+RAZORPAY_WEBHOOK_SECRET = ""
+RAZORPAY_PLAN_ID = ""
+RESEND_API_KEY = ""
+ANTHROPIC_API_KEY = ""
+
 # The daily-send pipeline (cron that queries D1 every 15 min + a queue
 # consumer that calls Claude/sends email) is not built yet — see plan.md.
 # Workers (unlike the now-unsupported Pages) can host Cron Triggers and
