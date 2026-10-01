@@ -1,0 +1,156 @@
+---
+interface Props {
+  title: string;
+  description: string;
+  hideTopbar?: boolean;
+  hideFooter?: boolean;
+}
+const { title, description, hideTopbar = false, hideFooter = false } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <slot name="background" />
+    <div class="shell">
+      {!hideTopbar && (
+        <header class="topbar">
+          <a class="wordmark" href="/"><img src="/starsync-logo.svg" alt="StarSync" width="112" height="23" /></a>
+          <nav>
+            <a href="/privacy">Privacy</a>
+          </nav>
+        </header>
+      )}
+      <main>
+        <slot />
+      </main>
+      {!hideFooter && (
+        <footer class="footer">
+          <p>StarSync · <a href="/privacy">Privacy</a> · Cancel or unsubscribe anytime from any email we send you.</p>
+        </footer>
+      )}
+    </div>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --bg: #08080d;
+    --bg-elevated: #111118;
+    --border: #23232f;
+    --text: #f2f1f6;
+    --text-muted: #a3a1b3;
+    --accent-1: #7c5cfc;
+    --accent-2: #33e6b0;
+    --accent-gradient: linear-gradient(120deg, var(--accent-1), var(--accent-2));
+    --radius: 16px;
+    --font-display: 'Google Sans Flex', sans-serif;
+    --font-body: 'Google Sans Flex', sans-serif;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(124, 92, 252, 0.16), transparent 45%),
+      radial-gradient(circle at 85% 15%, rgba(51, 230, 176, 0.1), transparent 40%);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
+
+  .shell {
+    position: relative;
+    z-index: 1;
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 28px 0;
+  }
+
+  .wordmark {
+    display: flex;
+    color: var(--text);
+  }
+  .wordmark img {
+    display: block;
+    height: 20px;
+    width: auto;
+  }
+
+  nav a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+  nav a:hover {
+    color: var(--text);
+  }
+
+  main {
+    flex: 1;
+    padding-bottom: 60px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin: 0;
+  }
+
+  p {
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+
+  a {
+    color: var(--text);
+    text-decoration: underline;
+  }
+
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: 24px 0 40px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+  .footer a {
+    color: var(--text-muted);
+    text-decoration: underline;
+  }
+
+  button {
+    font-family: var(--font-body);
+  }
+</style>

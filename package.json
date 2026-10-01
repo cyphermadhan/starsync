@@ -1,0 +1,26 @@
+{
+  "name": "starsync",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "wrangler pages dev ./dist",
+    "deploy": "astro build && wrangler pages deploy ./dist",
+    "db:migrate:local": "wrangler d1 execute starsync-db --local --file=./db/schema.sql",
+    "db:migrate:remote": "wrangler d1 execute starsync-db --remote --file=./db/schema.sql"
+  },
+  "dependencies": {
+    "astro": "^5.1.0",
+    "astronomia": "^4.2.0",
+    "tz-lookup": "^6.1.25"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@astrojs/cloudflare": "^12.2.0",
+    "@cloudflare/workers-types": "^4.20250109.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^3.99.0"
+  }
+}

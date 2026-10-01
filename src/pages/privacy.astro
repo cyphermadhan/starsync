@@ -1,0 +1,88 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="Privacy — StarSync" description="How StarSync handles your data, in plain language.">
+  <section class="privacy">
+    <h1>Privacy, in plain language</h1>
+    <p class="lede">No legal-speak. Here's exactly what we collect, why, and what we do — and don't do — with it.</p>
+
+    <h2>What we collect</h2>
+    <p>At signup: your name, email, date of birth, time of birth, place of birth, your role
+    (engineering, design, student, etc.), and the time you want your daily email. That's it —
+    no location tracking, no social profiles, no browsing history.</p>
+
+    <h2>Why we need it</h2>
+    <p>Your date, time, and place of birth are used <strong>once</strong>, at signup, to calculate
+    your rasi (moon sign) and nakshatra — using open astronomical formulas that run entirely on our
+    own server, not a third-party astrology service. We store the result of that calculation, not
+    your raw coordinates. Your role is used to make the daily content actually relevant to your day
+    instead of generic.</p>
+
+    <h2>How it's protected</h2>
+    <p>Your birth details are encrypted (AES-256-GCM) the moment they reach our server, before
+    they're ever written to a database. The decryption key lives only in our server's secret
+    store — there's no dashboard, admin panel, or support tool that can display your decrypted
+    information. It's decrypted automatically, in memory, only at the moment your daily email is
+    generated, and never logged or persisted in decrypted form. No one on our team can casually
+    "look up" your birth chart, because there's nothing built that lets us.</p>
+
+    <h2>What we don't do</h2>
+    <ul>
+      <li>We don't sell or share your data with advertisers or data brokers.</li>
+      <li>We don't have astrologers or humans reviewing your birth details.</li>
+      <li>We don't use your data to train any AI model.</li>
+    </ul>
+
+    <h2>Payments</h2>
+    <p>Payments and UPI Autopay / card mandates are handled entirely by Razorpay, a licensed
+    payment processor. We never see or store your full card number or UPI PIN — Razorpay passes
+    us only a subscription status.</p>
+
+    <h2>Who else touches your data</h2>
+    <p>A small number of specialist services process data on our behalf, only for the purpose
+    listed, and never for their own use:</p>
+    <ul>
+      <li><strong>Razorpay</strong> — payment processing and UPI Autopay/card mandates.</li>
+      <li><strong>Resend</strong> — delivering your daily email.</li>
+      <li><strong>Anthropic (Claude)</strong> — writing your daily email's content from your
+      rasi/nakshatra and role, not your name or contact details.</li>
+    </ul>
+
+    <h2>Deleting your data</h2>
+    <p>Unsubscribing — from any email we send, in one click — cancels your subscription
+    immediately and deletes your personal data from our systems right away. We keep a minimal,
+    anonymized billing record only as long as accounting/tax rules require, never your birth
+    details.</p>
+
+    <h2>Questions</h2>
+    <p>Reach out any time at <a href="mailto:privacy@familyfirstapps.com">privacy@familyfirstapps.com</a>.</p>
+  </section>
+
+  <style>
+    .privacy {
+      padding: 40px 0 20px;
+      max-width: 680px;
+    }
+    .privacy h1 {
+      font-size: clamp(2rem, 4vw, 2.6rem);
+    }
+    .lede {
+      margin-top: 14px;
+      font-size: 1.05rem;
+    }
+    .privacy h2 {
+      font-size: 1.15rem;
+      margin-top: 36px;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+    .privacy p,
+    .privacy li {
+      color: var(--text-muted);
+    }
+    .privacy ul {
+      padding-left: 20px;
+      line-height: 1.7;
+    }
+  </style>
+</Base>

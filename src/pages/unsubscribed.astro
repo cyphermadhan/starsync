@@ -1,0 +1,33 @@
+---
+import Base from '../layouts/Base.astro';
+
+const status = Astro.url.searchParams.get('status') ?? 'ok';
+---
+<Base title="Unsubscribed — StarSync" description="You've been unsubscribed from StarSync.">
+  <section class="unsub">
+    {status === 'ok' ? (
+      <>
+        <h1>You're unsubscribed. ✦</h1>
+        <p>Your subscription is cancelled and your birth details have already been deleted from our systems. No more emails, no more charges.</p>
+        <p>Changed your mind? You're always welcome to <a href="/">start again</a>.</p>
+      </>
+    ) : (
+      <>
+        <h1>That link didn't work</h1>
+        <p>This unsubscribe link may have already been used or has expired. Email us at
+        <a href="mailto:privacy@familyfirstapps.com">privacy@familyfirstapps.com</a> and we'll sort it out right away.</p>
+      </>
+    )}
+  </section>
+
+  <style>
+    .unsub {
+      padding: 80px 0;
+      max-width: 560px;
+    }
+    .unsub h1 {
+      font-size: clamp(1.8rem, 4vw, 2.4rem);
+      margin-bottom: 16px;
+    }
+  </style>
+</Base>

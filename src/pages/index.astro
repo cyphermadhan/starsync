@@ -1,0 +1,518 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base
+  title="StarSync — daily raasi palan for people who live in dark mode"
+  description="Daily Vedic astrology, rewritten for your actual day — standups, sprints, and everything in between. 5 days free."
+  hideTopbar
+  hideFooter
+>
+  <div class="particle-bg" id="particle-bg" aria-hidden="true" slot="background">
+    <canvas id="pr-output" class="pr-output"></canvas>
+  </div>
+
+  <section class="card" id="signup-card">
+    <div class="card-header">
+      <a href="/" class="logo-link">
+        <img src="/starsync-logo.svg" alt="StarSync" width="112" height="23" class="logo" />
+      </a>
+      <a href="/privacy" class="privacy-link">Privacy</a>
+    </div>
+
+    <div class="intro">
+      <h1>Get your daily reading.</h1>
+      <p class="lede">Drop your email once. Wake up to a personalized forecast every single morning.</p>
+    </div>
+
+    <form id="signup-form" novalidate>
+      <div class="field">
+        <label for="name">Name</label>
+        <input id="name" name="name" type="text" required autocomplete="name" />
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" required autocomplete="email" />
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Date of birth</label>
+          <div class="segmented" id="dob-segmented">
+            <input class="seg seg-day" type="text" inputmode="numeric" maxlength="2" placeholder="DD" aria-label="Day of birth" required />
+            <input class="seg seg-month" type="text" inputmode="numeric" maxlength="2" placeholder="MM" aria-label="Month of birth" required />
+            <input class="seg seg-year" type="text" inputmode="numeric" maxlength="4" placeholder="YYYY" aria-label="Year of birth" required />
+          </div>
+        </div>
+        <div class="field">
+          <label>Time of birth</label>
+          <div class="segmented" id="tob-segmented">
+            <input class="seg seg-hour" type="text" inputmode="numeric" maxlength="2" placeholder="HH" aria-label="Hour of birth" required />
+            <input class="seg seg-minute" type="text" inputmode="numeric" maxlength="2" placeholder="MM" aria-label="Minute of birth" required />
+            <select class="seg-select" aria-label="AM or PM">
+              <option value="AM">AM</option>
+              <option value="PM">PM</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <p class="hint">
+        As exact as you've got — even "roughly 3pm" helps. Used once to calculate your rasi, then
+        encrypted and locked away.
+      </p>
+
+      <div class="field">
+        <label for="pob">Place of birth</label>
+        <input id="pob" name="pob" type="text" placeholder="City, Country" required />
+      </div>
+
+      <div class="field">
+        <label for="role">What is your day job?</label>
+        <select id="role" name="role" required>
+          <option value="" disabled selected>Pick one</option>
+          <option value="engineering">Software / Engineering</option>
+          <option value="product-design">Product / Design</option>
+          <option value="data-ml">Data / AI / ML</option>
+          <option value="founder-business">Founder / Business</option>
+          <option value="student">Student</option>
+          <option value="not-working">Not working right now</option>
+          <option value="other">Something else</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Schedule your daily delivery (IST)</label>
+        <div class="segmented" id="send-segmented">
+          <input class="seg seg-hour" type="text" inputmode="numeric" maxlength="2" placeholder="HH" value="08" aria-label="Delivery hour" required />
+          <input class="seg seg-minute" type="text" inputmode="numeric" maxlength="2" placeholder="MM" value="00" aria-label="Delivery minute" required />
+          <select class="seg-select" aria-label="AM or PM">
+            <option value="AM" selected>AM</option>
+            <option value="PM">PM</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="pricing-note">
+        <strong>5 days free, then ₹11.11/week via UPI.</strong>
+        <span>With just a ₹5 instantly-refunded charge today to verify setup. Cancel anytime in one tap.</span>
+      </div>
+
+      <div class="field consent">
+        <label>
+          <input id="consent" name="consent" type="checkbox" required />
+          <span>
+            I agree to the <a href="/privacy" target="_blank">Privacy Policy</a> and to StarSync
+            emailing me daily at the time I've chosen.
+          </span>
+        </label>
+      </div>
+
+      <button type="submit" id="submit-btn">Sync my stars for free</button>
+
+      <p class="footnote">End-to-end encrypted. Not even we can read your birth details.</p>
+      <p class="error" id="form-error" role="alert"></p>
+    </form>
+
+    <div class="confirmation" id="confirmation" hidden>
+      <h2>You're synced. ✦</h2>
+      <p>
+        Check your inbox to confirm your UPI Autopay or card mandate — then your first raasi
+        palan lands at your chosen time tomorrow.
+      </p>
+    </div>
+  </section>
+
+  <p class="disclaimer">Disclaimer: Read-only data for reflection and entertainment.</p>
+
+  <script>
+    import { createParticleReveal } from '../lib/particle-reveal';
+
+    const bg = document.getElementById('particle-bg');
+    const output = document.getElementById('pr-output') as HTMLCanvasElement | null;
+
+    function renderPlainFallback() {
+      output?.remove();
+      const img = document.createElement('img');
+      img.src = '/hero-bg.webp';
+      img.alt = '';
+      img.className = 'pr-image';
+      bg?.appendChild(img);
+    }
+
+    if (bg && output) {
+      const image = new Image();
+      image.src = '/hero-bg.webp';
+      image
+        .decode()
+        .then(() => {
+          const instance = createParticleReveal(
+            { image, output },
+            { radius: 850, softness: 0.9, size: 0.3, background: '#08080d' },
+          );
+          if (!instance) renderPlainFallback();
+        })
+        .catch(() => renderPlainFallback());
+    }
+  </script>
+
+  <script>
+    // Auto-advance + backspace-to-previous for the DD/MM/YYYY and HH/MM/AM-PM
+    // segmented inputs. Generic over any `.segmented` group.
+    document.querySelectorAll<HTMLElement>('.segmented').forEach((group) => {
+      const fields = Array.from(group.querySelectorAll('.seg, .seg-select')) as Array<HTMLInputElement | HTMLSelectElement>;
+      fields.forEach((field, i) => {
+        if (!(field instanceof HTMLInputElement)) return;
+        field.addEventListener('input', () => {
+          field.value = field.value.replace(/\D/g, '').slice(0, field.maxLength || undefined);
+          if (field.maxLength > 0 && field.value.length >= field.maxLength) {
+            fields[i + 1]?.focus();
+          }
+        });
+        field.addEventListener('keydown', (event: KeyboardEvent) => {
+          if (event.key === 'Backspace' && field.value === '' && i > 0) {
+            fields[i - 1]?.focus();
+          }
+        });
+      });
+    });
+  </script>
+
+  <script>
+    const form = document.getElementById('signup-form') as HTMLFormElement;
+    const errorEl = document.getElementById('form-error') as HTMLParagraphElement;
+    const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+    const confirmation = document.getElementById('confirmation') as HTMLElement;
+
+    function seg(groupId: string, selector: string): string {
+      return (document.querySelector(`#${groupId} ${selector}`) as HTMLInputElement | HTMLSelectElement)?.value ?? '';
+    }
+
+    function to24Hour(hour12: string, minute: string, ampm: string): string {
+      let h = Number(hour12) % 12;
+      if (ampm === 'PM') h += 12;
+      return `${String(h).padStart(2, '0')}:${String(Number(minute)).padStart(2, '0')}`;
+    }
+
+    function buildDob(): string {
+      const day = seg('dob-segmented', '.seg-day').padStart(2, '0');
+      const month = seg('dob-segmented', '.seg-month').padStart(2, '0');
+      const year = seg('dob-segmented', '.seg-year').padStart(4, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function buildTime(groupId: string): string {
+      const hour = seg(groupId, '.seg-hour');
+      const minute = seg(groupId, '.seg-minute');
+      const ampm = seg(groupId, '.seg-select');
+      return to24Hour(hour, minute, ampm);
+    }
+
+    function loadRazorpayCheckout(): Promise<void> {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Could not load payment checkout. Please retry.'));
+        document.body.appendChild(script);
+      });
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      errorEl.textContent = '';
+
+      const dobDay = seg('dob-segmented', '.seg-day');
+      const dobMonth = seg('dob-segmented', '.seg-month');
+      const dobYear = seg('dob-segmented', '.seg-year');
+      const tobHour = seg('tob-segmented', '.seg-hour');
+      const tobMinute = seg('tob-segmented', '.seg-minute');
+      const sendHour = seg('send-segmented', '.seg-hour');
+      const sendMinute = seg('send-segmented', '.seg-minute');
+
+      if (!dobDay || !dobMonth || !dobYear || Number(dobDay) < 1 || Number(dobDay) > 31 || Number(dobMonth) < 1 || Number(dobMonth) > 12) {
+        errorEl.textContent = 'Enter a valid date of birth.';
+        return;
+      }
+      if (!tobHour || !tobMinute || Number(tobHour) < 1 || Number(tobHour) > 12 || Number(tobMinute) > 59) {
+        errorEl.textContent = 'Enter a valid time of birth.';
+        return;
+      }
+      if (!sendHour || !sendMinute || Number(sendHour) < 1 || Number(sendHour) > 12 || Number(sendMinute) > 59) {
+        errorEl.textContent = 'Enter a valid delivery time.';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Syncing...';
+
+      try {
+        const formData = new FormData(form);
+        const payload = {
+          ...Object.fromEntries(formData.entries()),
+          dob: buildDob(),
+          tob: buildTime('tob-segmented'),
+          sendTime: buildTime('send-segmented'),
+        };
+
+        const res = await fetch('/api/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(body.error ?? 'Something went wrong. Please try again.');
+        }
+
+        const { subscriptionId, razorpayKeyId, name, email } = (await res.json()) as {
+          subscriptionId: string;
+          razorpayKeyId: string;
+          name: string;
+          email: string;
+        };
+
+        await loadRazorpayCheckout();
+
+        // @ts-expect-error — Razorpay is injected globally by checkout.js
+        const checkout = new Razorpay({
+          key: razorpayKeyId,
+          subscription_id: subscriptionId,
+          name: 'StarSync',
+          description: '₹11.11/week after your 5-day free trial',
+          prefill: { name, email },
+          theme: { color: '#7c5cfc' },
+          handler: () => {
+            form.hidden = true;
+            confirmation.hidden = false;
+          },
+          modal: {
+            ondismiss: () => {
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Sync my stars for free';
+            },
+          },
+        });
+        checkout.open();
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Something went wrong.';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sync my stars for free';
+      }
+    });
+  </script>
+
+  <style>
+    .particle-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+    .pr-output,
+    .pr-image {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      border: 0;
+    }
+    .pr-image {
+      object-fit: cover;
+      object-position: top center;
+    }
+    .pr-output {
+      pointer-events: none;
+    }
+
+    .card {
+      max-width: 560px;
+      margin: 40px auto 60px;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.6);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+    .logo-link {
+      display: flex;
+      color: var(--text);
+    }
+    .logo {
+      display: block;
+      height: 20px;
+      width: auto;
+    }
+    .privacy-link {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-decoration: underline;
+    }
+
+    .intro {
+      margin-bottom: 28px;
+    }
+    .intro h1 {
+      font-size: 1.6rem;
+      font-weight: 600;
+    }
+    .intro .lede {
+      margin-top: 10px;
+      font-size: 0.95rem;
+      max-width: 460px;
+    }
+
+    .field {
+      margin-bottom: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    label {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+    .consent label {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+    .consent input {
+      width: auto;
+      margin-top: 2px;
+    }
+
+    input,
+    select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 1rem;
+      font-family: var(--font-body);
+    }
+    input:focus,
+    select:focus {
+      outline: 2px solid var(--accent-1);
+      outline-offset: 1px;
+    }
+
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      padding-right: 40px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23a3a1b3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+    }
+    .seg-select {
+      padding-right: 32px;
+      background-position: right 10px center;
+    }
+
+    .segmented {
+      display: flex;
+      gap: 8px;
+    }
+    .seg {
+      width: 52px;
+      text-align: center;
+      padding: 12px 6px;
+      flex: 0 0 auto;
+    }
+    .seg-year {
+      width: 72px;
+    }
+    .seg-select {
+      flex: 0 0 auto;
+      width: 76px;
+      padding: 12px 8px;
+    }
+
+    .hint {
+      margin: -8px 0 18px;
+      font-size: 0.8rem;
+    }
+
+    .pricing-note {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      background: rgba(124, 92, 252, 0.08);
+      border: 1px solid rgba(124, 92, 252, 0.25);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 0.88rem;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+    .pricing-note strong {
+      color: var(--text);
+    }
+    .pricing-note span {
+      color: var(--text-muted);
+    }
+
+    button[type='submit'] {
+      width: 100%;
+      background: #ffffff;
+      color: #08080d;
+      font-weight: 600;
+      font-size: 1rem;
+      border: none;
+      border-radius: 12px;
+      padding: 15px;
+      cursor: pointer;
+    }
+    button[type='submit']:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .footnote {
+      text-align: center;
+      font-size: 0.78rem;
+      margin-top: 20px;
+      margin-bottom: 0;
+      line-height: 1.6;
+    }
+
+    .disclaimer {
+      max-width: 560px;
+      margin: 16px auto 40px;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .error {
+      color: #ff8a8a;
+      font-size: 0.85rem;
+      text-align: center;
+      margin-top: 10px;
+      min-height: 1.2em;
+    }
+
+    .confirmation h2 {
+      margin-bottom: 12px;
+    }
+  </style>
+</Base>

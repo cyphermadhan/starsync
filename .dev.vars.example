@@ -1,0 +1,14 @@
+# Copy to .dev.vars for local `wrangler pages dev` — never commit the real file.
+
+# 32-byte key, base64-encoded. Generate with:
+#   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+ENCRYPTION_KEY=
+
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+RAZORPAY_WEBHOOK_SECRET=
+RAZORPAY_PLAN_ID=
+
+RESEND_API_KEY=
+
+ANTHROPIC_API_KEY=
