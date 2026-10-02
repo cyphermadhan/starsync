@@ -128,20 +128,6 @@ import ParticleBackground from '../components/ParticleBackground.astro';
       </div>
 
       <div class="field">
-        <label for="role">What is your day job?</label>
-        <select id="role" name="role" required>
-          <option value="" disabled selected>Pick one</option>
-          <option value="engineering">Software / Engineering</option>
-          <option value="product-design">Product / Design</option>
-          <option value="data-ml">Data / AI / ML</option>
-          <option value="founder-business">Founder / Business</option>
-          <option value="student">Student</option>
-          <option value="not-working">Not working right now</option>
-          <option value="other">Something else</option>
-        </select>
-      </div>
-
-      <div class="field">
         <label>Schedule your daily delivery (IST)</label>
         <div class="segmented" id="send-segmented">
           <input class="seg seg-hour" type="text" inputmode="numeric" maxlength="2" placeholder="HH" value="08" aria-label="Delivery hour" required />
@@ -167,7 +153,7 @@ import ParticleBackground from '../components/ParticleBackground.astro';
         </label>
       </div>
 
-      <button type="submit" id="subscribe-submit-btn">Sync my stars for free</button>
+      <button type="submit" id="subscribe-submit-btn">Sync my stars</button>
 
       <p class="footnote">End-to-end encrypted. Not even we can read your birth details.</p>
       <p class="error" id="subscribe-error" role="alert" hidden></p>
@@ -379,6 +365,10 @@ import ParticleBackground from '../components/ParticleBackground.astro';
           tob: capturedTob,
           pob: capturedPob,
           sendTime: buildTime('send-segmented'),
+          // Role is no longer asked anywhere in this flow — /api/signup
+          // still requires some value, so default to the catch-all option
+          // rather than re-adding the question to the form.
+          role: 'other',
         };
 
         const res = await fetch('/api/signup', {
@@ -398,7 +388,7 @@ import ParticleBackground from '../components/ParticleBackground.astro';
       } catch (err) {
         setError(subscribeErrorEl, err instanceof Error ? err.message : 'Something went wrong.');
         subscribeSubmitBtn.disabled = false;
-        subscribeSubmitBtn.textContent = 'Sync my stars for free';
+        subscribeSubmitBtn.textContent = 'Sync my stars';
       }
     });
   </script>
@@ -572,8 +562,9 @@ import ParticleBackground from '../components/ParticleBackground.astro';
       display: flex;
       flex-direction: column;
       gap: 4px;
-      background: rgba(124, 92, 252, 0.08);
-      border: 1px solid rgba(124, 92, 252, 0.25);
+      /* #47a3d4 — same blue as the input focus outline, was purple. */
+      background: rgba(71, 163, 212, 0.08);
+      border: 1px solid rgba(71, 163, 212, 0.25);
       border-radius: 12px;
       padding: 14px 16px;
       font-size: 0.88rem;
@@ -647,7 +638,7 @@ import ParticleBackground from '../components/ParticleBackground.astro';
       margin: 0 0 20px;
     }
     .reading-section {
-      margin-bottom: 18px;
+      margin-bottom: 32px;
     }
     .reading-section p {
       color: var(--text);
@@ -696,16 +687,19 @@ import ParticleBackground from '../components/ParticleBackground.astro';
       font-style: italic;
       font-size: 0.92rem;
       color: var(--text-muted);
-      border-top: 1px solid var(--border);
-      padding-top: 16px;
       margin: 20px 0 0;
     }
 
     .subscribe-prompt {
       margin-top: 28px;
-      padding-top: 24px;
-      border-top: 1px solid var(--border);
       text-align: center;
+    }
+
+    #subscribe-form {
+      /* Once revealed, this sits directly after reading-quote/
+         subscribe-prompt in the DOM with nothing providing a gap — this is
+         that gap. */
+      margin-top: 32px;
     }
     .subscribe-prompt p {
       margin: 0 0 14px;

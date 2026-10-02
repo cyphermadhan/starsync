@@ -23,7 +23,9 @@ const RASI_ELEMENTS: Record<string, string> = {
 
 const SYSTEM_PROMPT = `You write a short, evergreen "find your vibe" snapshot for StarSync, based on someone's rasi (moon sign), nakshatra, and element. Voice: a brutally honest, funny friend who happens to know astrology. Never mystical-serious, never generic fortune-cookie vagueness, never corporate.
 
-This is NOT about "today" — it's a general read on their energy and how they move through life based on their chart, true any day someone reads it. Ground everything in their actual rasi, nakshatra, and element. Nothing about this reader's profession or role is known, so the work field must stay broadly applicable to anyone with a job or daily responsibilities — never guess or imply a specific profession.
+This is NOT about "today" — it's a general read on their energy and how they move through life based on their chart, true any day someone reads it. Ground everything in their actual rasi, nakshatra, and element — but translate it into plain, everyday English a complete beginner would understand instantly. Never print astrology-specific words anywhere in the output: no "rasi," "nakshatra," "element," "Fire," "Earth," "Air," "Water," "sign," or "zodiac." Describe people and energy only in terms of behavior, personality, and feelings. Nothing about this reader's profession or role is known, so the work field must stay broadly applicable to anyone with a job or daily responsibilities — never guess or imply a specific profession.
+
+Never use an em dash (—) or en dash (–) anywhere in the output. Use a comma, a period, or "and"/"but" instead.
 
 Respond with ONLY a JSON object, no markdown, no commentary, in exactly this shape:
 {
@@ -31,7 +33,7 @@ Respond with ONLY a JSON object, no markdown, no commentary, in exactly this sha
   "coreEnergy": "1-2 sentences on their baseline emotional/psychological energy — how it generally feels to be them, not tied to any specific day.",
   "workProductivity": "1-2 sentences on how they tend to operate at work or with daily responsibilities in general — their pattern around focus, deadlines, collaboration, or burnout risk. Broadly applicable to anyone with a job, not tied to any specific profession.",
   "loveRelationships": "1-2 sentences on how they tend to show up in love/dating/relationships — their pattern, not a day-specific prediction. Be specific and a little cheeky, not generic.",
-  "socialDynamics": "1-2 sentences about how they tend to click or clash with other elements in friendships/family. The reader does NOT know astrology jargon, so never drop a bare element name like 'Water friends' or 'Earth signs' — always fuse the trait into the same phrase instead, e.g. 'your intuitive, feelings-first Water friends' or 'your steady, practical-minded Earth friends' (Fire = bold/blunt/impulsive, Earth = grounded/practical/steady, Air = chatty/social/idea-driven, Water = emotional/intuitive/sensitive). Name one element they lean on and, if it fits, one to be cautious with.",
+  "socialDynamics": "1-2 sentences about the kind of people they click with and the kind they clash with, in friendships or family. Describe those people by personality/behavior only, e.g. 'people who think out loud and love a good debate' or 'people who need everything planned down to the last detail' — never by an element, sign, or any astrology label.",
   "dos": ["2-3 short imperative phrases, each under 6 words, general life/relationship advice"],
   "donts": ["2-3 short imperative phrases, each under 6 words, general life/relationship advice"],
   "quote": "One original, short aphorism in the same voice. NOT a real quote from any real person, book, song, or media — write it fresh, as if it's wisdom you just came up with on the spot."
@@ -54,6 +56,25 @@ export interface PreviewContentInput {
   rasi: string;
   nakshatra: string;
   pada: number;
+}
+
+// Defensive net on top of the prompt instruction — models slip back into
+// em dashes often enough that relying on the instruction alone isn't safe.
+function stripDashes(text: string): string {
+  return text.replace(/\s*[—–]\s*/g, ', ');
+}
+
+function sanitizeContent(content: PreviewContent): PreviewContent {
+  return {
+    hook: stripDashes(content.hook),
+    coreEnergy: stripDashes(content.coreEnergy),
+    workProductivity: stripDashes(content.workProductivity),
+    loveRelationships: stripDashes(content.loveRelationships),
+    socialDynamics: stripDashes(content.socialDynamics),
+    dos: content.dos.map(stripDashes),
+    donts: content.donts.map(stripDashes),
+    quote: stripDashes(content.quote),
+  };
 }
 
 function assertPreviewContent(value: unknown): PreviewContent {
@@ -117,5 +138,5 @@ Write this chart's evergreen vibe snapshot as JSON.`;
     throw new Error(`OpenAI response was not valid JSON: ${raw}`);
   }
 
-  return assertPreviewContent(parsed);
+  return sanitizeContent(assertPreviewContent(parsed));
 }
