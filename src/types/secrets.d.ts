@@ -13,5 +13,6 @@ declare namespace Cloudflare {
     RAZORPAY_KEY_SECRET: string;
     RAZORPAY_WEBHOOK_SECRET: string;
     RAZORPAY_PLAN_ID: string;
+    OPENAI_API_KEY: string;
   }
 }
