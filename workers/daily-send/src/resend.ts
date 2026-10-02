@@ -231,7 +231,7 @@ export interface SubscriptionEmailInput {
 // payment nudge. Visually matches the daily email (same shell/logo/footer).
 export async function sendSubscriptionEmail(input: SubscriptionEmailInput, apiKey: string): Promise<void> {
   const firstName = escapeHtml(input.name.split(' ')[0] ?? input.name);
-  const headline = 'Your readings are paused';
+  const headline = 'Resume your daily reading at just ₹11.11/week';
   const body = `Your free trial ended on ${input.trialEndsAtDateStr}. Add payment to pick up right where you left off — nothing lost, just continued.`;
 
   const inner = `
