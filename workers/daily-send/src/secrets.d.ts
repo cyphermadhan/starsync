@@ -7,4 +7,7 @@ interface Env {
   ENCRYPTION_KEY: string;
   OPENAI_API_KEY: string;
   RESEND_API_KEY: string;
+  RAZORPAY_KEY_ID: string;
+  RAZORPAY_KEY_SECRET: string;
+  RAZORPAY_PLAN_ID: string;
 }

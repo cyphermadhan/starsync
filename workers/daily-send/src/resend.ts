@@ -21,6 +21,10 @@ export interface SendDailyEmailInput {
   greeting: string;
   content: DailyContent;
   unsubscribeToken: string;
+  // Appended before the footer when present — the day-3/day-5 payment nudge.
+  // Built via buildNudgeBlock() below and handed in by the caller so the
+  // "which day, what headline" decision stays in index.ts, not here.
+  nudgeHtml?: string;
 }
 
 function escapeHtml(value: string): string {
@@ -62,6 +66,17 @@ function listSection(icon: string, title: string, items: string[]): string {
       </div>`;
 }
 
+// Shared CTA block — appended to the day-3/day-5 reading, and the entire
+// body of the standalone grace-period "subscription" email.
+export function buildNudgeBlock(checkoutUrl: string, headline: string, body: string): string {
+  return `
+      <div style="margin-top:40px;padding:24px;background:#f7f7fb;border:1px solid #e4e3ec;border-radius:16px;text-align:center;">
+        <p class="text-main" style="margin:0;color:${TEXT};font-family:${FONT};font-size:16px;font-weight:600;letter-spacing:-0.021px;">${escapeHtml(headline)}</p>
+        <p class="text-muted" style="margin:8px 0 0;color:${MUTED};font-family:${FONT};font-size:14px;line-height:1.4;letter-spacing:-0.021px;">${escapeHtml(body)}</p>
+        <a href="${checkoutUrl}" style="display:inline-block;margin-top:16px;padding:12px 28px;background:${TEXT};color:#ffffff;font-family:${FONT};font-size:14px;font-weight:600;text-decoration:none;border-radius:999px;">Add payment to continue</a>
+      </div>`;
+}
+
 function styleBlock(): string {
   // Gmail Android ignores this media query entirely and does its own partial
   // auto-invert instead (darkens backgrounds, leaves images untouched) — so
@@ -79,10 +94,10 @@ function styleBlock(): string {
     </style>`;
 }
 
-function buildHtml(input: SendDailyEmailInput): string {
-  const unsubscribeUrl = `https://starsync.familyfirstapps.com/api/unsubscribe?token=${encodeURIComponent(input.unsubscribeToken)}`;
-  const firstName = escapeHtml(input.name.split(' ')[0] ?? input.name);
-  const c = input.content;
+// Common page shell (head/style/logo/footer) every email variant shares —
+// `innerHtml` is just the part between the logo and the footer.
+function emailShell(innerHtml: string, unsubscribeToken: string): string {
+  const unsubscribeUrl = `https://starsync.familyfirstapps.com/api/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`;
 
   return `<!doctype html>
 <html>
@@ -100,10 +115,32 @@ function buildHtml(input: SendDailyEmailInput): string {
         <img src="${ASSETS_BASE}/starsync-logo-chip.png" width="154" height="57" alt="StarSync" style="display:inline-block;" />
       </div>
 
+      ${innerHtml}
+
+      <p style="margin:40px 0 0;text-align:center;">
+        <a href="${unsubscribeUrl}" class="text-muted" style="color:${MUTED};font-family:${FONT};font-size:12px;text-decoration:underline dotted;">Unsubscribe</a>
+        <span style="display:inline-block;width:24px;"></span>
+        <a href="https://starsync.familyfirstapps.com/privacy" class="text-muted" style="color:${MUTED};font-family:${FONT};font-size:12px;text-decoration:underline dotted;">Privacy</a>
+      </p>
+    </div>
+  </body>
+</html>`;
+}
+
+function greetingBlock(greeting: string, firstName: string, dayOfWeek: string, dateStr: string): string {
+  return `
       <div style="margin-top:24px;text-align:center;">
-        <p class="text-main" style="margin:0;color:${TEXT};font-family:${FONT};font-size:18px;font-weight:400;line-height:1.33;letter-spacing:-0.027px;">${escapeHtml(input.greeting)}, ${firstName}!</p>
-        <p class="text-muted" style="margin:0;color:${MUTED};font-family:${FONT};font-size:14px;font-weight:400;letter-spacing:-0.021px;">${escapeHtml(input.dayOfWeek)}, ${escapeHtml(input.dateStr)}</p>
-      </div>
+        <p class="text-main" style="margin:0;color:${TEXT};font-family:${FONT};font-size:18px;font-weight:400;line-height:1.33;letter-spacing:-0.027px;">${escapeHtml(greeting)}, ${firstName}!</p>
+        <p class="text-muted" style="margin:0;color:${MUTED};font-family:${FONT};font-size:14px;font-weight:400;letter-spacing:-0.021px;">${escapeHtml(dayOfWeek)}, ${escapeHtml(dateStr)}</p>
+      </div>`;
+}
+
+function buildHtml(input: SendDailyEmailInput): string {
+  const firstName = escapeHtml(input.name.split(' ')[0] ?? input.name);
+  const c = input.content;
+
+  const inner = `
+      ${greetingBlock(input.greeting, firstName, input.dayOfWeek, input.dateStr)}
 
       <p class="text-main" style="margin:24px 0 0;color:${TEXT};font-family:${FONT};font-size:18px;font-weight:600;line-height:1.33;letter-spacing:-0.027px;text-align:center;">~ ${escapeHtml(c.hook)} ~</p>
 
@@ -116,14 +153,9 @@ function buildHtml(input: SendDailyEmailInput): string {
 
       <p class="text-muted" style="margin:40px 0 0;color:${MUTED};font-family:${FONT};font-size:16px;font-style:italic;line-height:1.5;letter-spacing:-0.024px;text-align:center;">&quot;${escapeHtml(c.quote)}&quot;</p>
 
-      <p style="margin:40px 0 0;text-align:center;">
-        <a href="${unsubscribeUrl}" class="text-muted" style="color:${MUTED};font-family:${FONT};font-size:12px;text-decoration:underline dotted;">Unsubscribe</a>
-        <span style="display:inline-block;width:24px;"></span>
-        <a href="https://starsync.familyfirstapps.com/privacy" class="text-muted" style="color:${MUTED};font-family:${FONT};font-size:12px;text-decoration:underline dotted;">Privacy</a>
-      </p>
-    </div>
-  </body>
-</html>`;
+      ${input.nudgeHtml ?? ''}`;
+
+  return emailShell(inner, input.unsubscribeToken);
 }
 
 function buildText(input: SendDailyEmailInput): string {
@@ -156,7 +188,10 @@ ${c.donts.map((d) => `- ${d}`).join('\n')}
 Unsubscribe: https://starsync.familyfirstapps.com/api/unsubscribe?token=${input.unsubscribeToken}`;
 }
 
-export async function sendDailyEmail(input: SendDailyEmailInput, apiKey: string): Promise<void> {
+async function sendEmail(
+  input: { to: string; subject: string; html: string; text: string },
+  apiKey: string,
+): Promise<void> {
   const res = await fetch(RESEND_URL, {
     method: 'POST',
     headers: {
@@ -166,13 +201,84 @@ export async function sendDailyEmail(input: SendDailyEmailInput, apiKey: string)
     body: JSON.stringify({
       from: FROM_ADDRESS,
       to: input.to,
-      subject: "Today's Sync",
-      html: buildHtml(input),
-      text: buildText(input),
+      subject: input.subject,
+      html: input.html,
+      text: input.text,
     }),
   });
 
   if (!res.ok) {
     throw new Error(`Resend request failed: ${res.status} ${await res.text()}`);
   }
+}
+
+export async function sendDailyEmail(input: SendDailyEmailInput, apiKey: string): Promise<void> {
+  await sendEmail(
+    { to: input.to, subject: "Today's Sync", html: buildHtml(input), text: buildText(input) },
+    apiKey,
+  );
+}
+
+export interface SubscriptionEmailInput {
+  to: string;
+  name: string;
+  checkoutUrl: string;
+  trialEndsAtDateStr: string;
+  unsubscribeToken: string;
+}
+
+// Day 6/7 grace-period email — trial's over, no reading content, just the
+// payment nudge. Visually matches the daily email (same shell/logo/footer).
+export async function sendSubscriptionEmail(input: SubscriptionEmailInput, apiKey: string): Promise<void> {
+  const firstName = escapeHtml(input.name.split(' ')[0] ?? input.name);
+  const headline = 'Your readings are paused';
+  const body = `Your free trial ended on ${input.trialEndsAtDateStr}. Add payment to pick up right where you left off — nothing lost, just continued.`;
+
+  const inner = `
+      <div style="margin-top:24px;text-align:center;">
+        <p class="text-main" style="margin:0;color:${TEXT};font-family:${FONT};font-size:18px;font-weight:400;line-height:1.33;letter-spacing:-0.027px;">Hey ${firstName}.</p>
+      </div>
+      ${buildNudgeBlock(input.checkoutUrl, headline, body)}`;
+
+  const html = emailShell(inner, input.unsubscribeToken);
+  const text = `Hey ${input.name}.
+
+${headline}
+${body}
+
+Add payment: ${input.checkoutUrl}
+
+Unsubscribe: https://starsync.familyfirstapps.com/api/unsubscribe?token=${input.unsubscribeToken}`;
+
+  await sendEmail({ to: input.to, subject: 'Your StarSync readings are paused', html, text }, apiKey);
+}
+
+export interface PaymentConfirmedInput {
+  to: string;
+  name: string;
+  nextChargeDateStr: string;
+  unsubscribeToken: string;
+}
+
+// Sent on the subscription.authenticated webhook — replaces what used to be
+// a redundant "welcome" reading, since under the no-payment-at-signup flow
+// this subscriber has already been getting daily readings since day 0.
+export async function sendPaymentConfirmedEmail(input: PaymentConfirmedInput, apiKey: string): Promise<void> {
+  const firstName = escapeHtml(input.name.split(' ')[0] ?? input.name);
+
+  const inner = `
+      <div style="margin-top:24px;text-align:center;">
+        <p class="text-main" style="margin:0;color:${TEXT};font-family:${FONT};font-size:18px;font-weight:600;line-height:1.33;letter-spacing:-0.027px;">Payment confirmed ✦</p>
+        <p class="text-muted" style="margin:8px 0 0;color:${MUTED};font-family:${FONT};font-size:14px;line-height:1.4;letter-spacing:-0.021px;">Hey ${firstName} — you're all set. Your daily readings continue without interruption. Next charge: ₹11.11 on ${escapeHtml(input.nextChargeDateStr)}.</p>
+      </div>`;
+
+  const html = emailShell(inner, input.unsubscribeToken);
+  const text = `Payment confirmed ✦
+
+Hey ${input.name} — you're all set. Your daily readings continue without interruption.
+Next charge: ₹11.11 on ${input.nextChargeDateStr}.
+
+Unsubscribe: https://starsync.familyfirstapps.com/api/unsubscribe?token=${input.unsubscribeToken}`;
+
+  await sendEmail({ to: input.to, subject: 'Payment confirmed — StarSync', html, text }, apiKey);
 }

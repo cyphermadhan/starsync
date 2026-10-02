@@ -26,6 +26,8 @@ dead_letter_queue = "starsync-daily-send-dlq"
 crons = ["*/15 * * * *"]
 
 # Secrets (set with `wrangler secret put <NAME> --name starsync-daily-send`,
-# never committed): ENCRYPTION_KEY, OPENAI_API_KEY, RESEND_API_KEY
-# (same ENCRYPTION_KEY value as the starsync Worker — needed here too, to
-# decrypt subscriber PII before generating/sending each day's reading)
+# never committed): ENCRYPTION_KEY, OPENAI_API_KEY, RESEND_API_KEY,
+# RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_PLAN_ID
+# (same ENCRYPTION_KEY/RAZORPAY_* values as the starsync Worker — needed
+# here too since this worker now creates the Razorpay subscription at the
+# day-3 payment nudge, not at signup; see src/razorpay.ts)

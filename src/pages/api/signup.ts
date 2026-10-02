@@ -3,7 +3,7 @@ import { env } from 'cloudflare:workers';
 import { encryptField, generateToken, sha256Hex } from '../../lib/encryption';
 import { geocodePlaceOfBirth, toUtcDate } from '../../lib/geocoding';
 import { computeVedicChart } from '../../lib/vedic';
-import { cancelSubscription, createCustomer, createSubscription } from '../../lib/razorpay';
+import { cancelSubscription } from '../../lib/razorpay';
 
 const TRIAL_DAYS = 5;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -102,7 +102,16 @@ export const POST: APIRoute = async ({ request }) => {
         console.error(`Failed to cancel abandoned subscription ${existing.razorpay_subscription_id}:`, err);
       }
     }
-    await env.DB.prepare('DELETE FROM subscribers WHERE id = ?').bind(existing.id).run();
+    // delivery_log references subscribers via a foreign key with no ON
+    // DELETE CASCADE — deleting the parent row first throws a FOREIGN KEY
+    // constraint error for anyone who's ever received an email (including
+    // the immediate welcome reading sent right at signup). billing_events
+    // has no such FK (by design, see schema.sql) — not relevant here
+    // anyway, since this branch only runs when billing_events is empty.
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM delivery_log WHERE subscriber_id = ?').bind(existing.id),
+      env.DB.prepare('DELETE FROM subscribers WHERE id = ?').bind(existing.id),
+    ]);
   }
 
   let chart: { rasi: string; nakshatra: string; pada: number };
@@ -113,26 +122,6 @@ export const POST: APIRoute = async ({ request }) => {
   } catch (err) {
     return Response.json(
       { error: err instanceof Error ? err.message : 'Could not calculate your birth chart.' },
-      { status: 502 },
-    );
-  }
-
-  let subscriptionId: string;
-  let customerId: string;
-  try {
-    const customer = await createCustomer(data.name, data.email, env.RAZORPAY_KEY_ID, env.RAZORPAY_KEY_SECRET);
-    customerId = customer.id;
-    const subscription = await createSubscription(
-      customer.id,
-      env.RAZORPAY_PLAN_ID,
-      TRIAL_DAYS,
-      env.RAZORPAY_KEY_ID,
-      env.RAZORPAY_KEY_SECRET,
-    );
-    subscriptionId = subscription.id;
-  } catch (err) {
-    return Response.json(
-      { error: err instanceof Error ? err.message : 'Could not set up billing.' },
       { status: 502 },
     );
   }
@@ -155,8 +144,8 @@ export const POST: APIRoute = async ({ request }) => {
     `INSERT INTO subscribers
       (id, email_encrypted, email_hash, name_encrypted, dob_encrypted, tob_encrypted, pob_encrypted,
        role_encrypted, rasi, nakshatra, pada, preferred_send_minute_utc, status, trial_ends_at,
-       razorpay_customer_id, razorpay_subscription_id, unsubscribe_token)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'trial', ?, ?, ?, ?)`,
+       unsubscribe_token)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'trial', ?, ?)`,
   )
     .bind(
       id,
@@ -172,16 +161,14 @@ export const POST: APIRoute = async ({ request }) => {
       chart.pada,
       sendMinuteUtc(data.sendTime),
       trialEndsAt,
-      customerId,
-      subscriptionId,
       unsubscribeToken,
     )
     .run();
 
-  return Response.json({
-    subscriptionId,
-    razorpayKeyId: env.RAZORPAY_KEY_ID,
-    name: data.name,
-    email: data.email,
-  });
+  // No payment step at signup anymore — just send the first reading right
+  // away. The payment nudge comes later via email (day 3/5 of the trial),
+  // handled entirely inside workers/daily-send.
+  await env.DAILY_SEND_QUEUE.send({ subscriberId: id });
+
+  return Response.json({ name: data.name, email: data.email });
 };

@@ -57,10 +57,7 @@ import Base from '../layouts/Base.astro';
           </div>
         </div>
       </div>
-      <p class="hint">
-        As exact as you've got — even "roughly 3pm" helps. Used once to calculate your rasi, then
-        encrypted and locked away.
-      </p>
+      <p class="hint">If you don't remember it, enter something random.</p>
 
       <div class="field">
         <label for="pob">Place of birth</label>
@@ -94,8 +91,7 @@ import Base from '../layouts/Base.astro';
       </div>
 
       <div class="pricing-note">
-        <strong>5 days free, then ₹11.11/week via UPI.</strong>
-        <span>With just a ₹5 instantly-refunded charge today to verify setup. Cancel anytime in one tap.</span>
+        <strong>First 5 days free, then ₹11.11/week via UPI autopay</strong>
       </div>
 
       <div class="field consent">
@@ -117,9 +113,9 @@ import Base from '../layouts/Base.astro';
     <div class="confirmation" id="confirmation" hidden>
       <h2>You're synced. ✦</h2>
       <p>
-        Check your inbox to confirm your UPI Autopay or card mandate — once that's done,
-        your first reading lands right away. After that, you'll get one every day at your
-        chosen time.
+        Check your inbox — your first reading is on its way right now. You'll get one every
+        day at your chosen time, free for 5 days. We'll email you to add payment before your
+        trial ends — no card needed today.
       </p>
     </div>
   </section>
@@ -222,16 +218,6 @@ import Base from '../layouts/Base.astro';
       return to24Hour(hour, minute, ampm);
     }
 
-    function loadRazorpayCheckout(): Promise<void> {
-      return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error('Could not load payment checkout. Please retry.'));
-        document.body.appendChild(script);
-      });
-    }
-
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       errorEl.textContent = '';
@@ -280,35 +266,8 @@ import Base from '../layouts/Base.astro';
           throw new Error(body.error ?? 'Something went wrong. Please try again.');
         }
 
-        const { subscriptionId, razorpayKeyId, name, email } = (await res.json()) as {
-          subscriptionId: string;
-          razorpayKeyId: string;
-          name: string;
-          email: string;
-        };
-
-        await loadRazorpayCheckout();
-
-        // @ts-expect-error — Razorpay is injected globally by checkout.js
-        const checkout = new Razorpay({
-          key: razorpayKeyId,
-          subscription_id: subscriptionId,
-          name: 'StarSync',
-          description: '₹11.11/week after your 5-day free trial',
-          prefill: { name, email },
-          theme: { color: '#7c5cfc' },
-          handler: () => {
-            form.hidden = true;
-            confirmation.hidden = false;
-          },
-          modal: {
-            ondismiss: () => {
-              submitBtn.disabled = false;
-              submitBtn.textContent = 'Sync my stars for free';
-            },
-          },
-        });
-        checkout.open();
+        form.hidden = true;
+        confirmation.hidden = false;
       } catch (err) {
         errorEl.textContent = err instanceof Error ? err.message : 'Something went wrong.';
         submitBtn.disabled = false;

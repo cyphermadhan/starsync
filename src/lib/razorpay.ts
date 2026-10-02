@@ -1,8 +1,8 @@
-// Razorpay Subscriptions client. The Plan (₹11.11/week) is created once in
-// the Razorpay dashboard — its ID goes in RAZORPAY_PLAN_ID. `start_at` is set
-// to 5 days from now so the mandate is authorized at signup but the first
-// charge only happens once the trial ends (see plan.md for the UPI Autopay
-// mandate-registration-charge caveat to confirm in your dashboard).
+// Razorpay client — this worker only ever cancels subscriptions and
+// verifies webhook signatures. Creating customers/subscriptions now happens
+// from workers/daily-send (see that worker's own src/razorpay.ts) at the
+// day-3 payment nudge, not at signup — the Plan (₹11.11/week) is still
+// created once in the Razorpay dashboard, its ID goes in RAZORPAY_PLAN_ID.
 
 import { timingSafeEqual } from 'node:crypto';
 
@@ -10,68 +10,6 @@ const API_BASE = 'https://api.razorpay.com/v1';
 
 function authHeader(keyId: string, keySecret: string): string {
   return `Basic ${btoa(`${keyId}:${keySecret}`)}`;
-}
-
-export interface RazorpayCustomer {
-  id: string;
-}
-
-export async function createCustomer(
-  name: string,
-  email: string,
-  keyId: string,
-  keySecret: string,
-): Promise<RazorpayCustomer> {
-  const res = await fetch(`${API_BASE}/customers`, {
-    method: 'POST',
-    headers: {
-      Authorization: authHeader(keyId, keySecret),
-      'Content-Type': 'application/json',
-    },
-    // Must be the string "0", not the number 0 — Razorpay's API silently
-    // treats a non-string value as unset and defaults to failing instead
-    // of returning the existing customer (confirmed against their docs
-    // after hitting exactly this in production).
-    body: JSON.stringify({ name, email, fail_existing: '0' }),
-  });
-  if (!res.ok) {
-    throw new Error(`Razorpay createCustomer failed: ${res.status} ${await res.text()}`);
-  }
-  return res.json();
-}
-
-export interface RazorpaySubscription {
-  id: string;
-  short_url: string;
-}
-
-export async function createSubscription(
-  customerId: string,
-  planId: string,
-  trialDays: number,
-  keyId: string,
-  keySecret: string,
-): Promise<RazorpaySubscription> {
-  const startAt = Math.floor(Date.now() / 1000) + trialDays * 24 * 60 * 60;
-
-  const res = await fetch(`${API_BASE}/subscriptions`, {
-    method: 'POST',
-    headers: {
-      Authorization: authHeader(keyId, keySecret),
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      plan_id: planId,
-      customer_id: customerId,
-      total_count: 52, // weekly plan billed indefinitely, capped at ~1 year per Razorpay's max; renew via a cron job if needed
-      start_at: startAt,
-      customer_notify: 1,
-    }),
-  });
-  if (!res.ok) {
-    throw new Error(`Razorpay createSubscription failed: ${res.status} ${await res.text()}`);
-  }
-  return res.json();
 }
 
 export async function cancelSubscription(

@@ -20,10 +20,24 @@ export const GET: APIRoute = async ({ url, redirect }) => {
   }
 
   if (subscriber.razorpay_subscription_id) {
-    await cancelSubscription(subscriber.razorpay_subscription_id, env.RAZORPAY_KEY_ID, env.RAZORPAY_KEY_SECRET);
+    try {
+      await cancelSubscription(subscriber.razorpay_subscription_id, env.RAZORPAY_KEY_ID, env.RAZORPAY_KEY_SECRET);
+    } catch (err) {
+      // Best-effort — e.g. Razorpay may already consider it cancelled.
+      // Deleting the user's data takes priority over this succeeding.
+      console.error(`Failed to cancel subscription ${subscriber.razorpay_subscription_id} on unsubscribe:`, err);
+    }
   }
 
-  await env.DB.prepare('DELETE FROM subscribers WHERE id = ?').bind(subscriber.id).run();
+  // delivery_log references subscribers via a foreign key with no ON DELETE
+  // CASCADE — deleting the parent row first throws a FOREIGN KEY constraint
+  // error for any subscriber who's ever received an email. billing_events
+  // has no such FK (by design, see schema.sql) and is deliberately kept as
+  // the retained billing/audit trail.
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM delivery_log WHERE subscriber_id = ?').bind(subscriber.id),
+    env.DB.prepare('DELETE FROM subscribers WHERE id = ?').bind(subscriber.id),
+  ]);
 
   return redirect('/unsubscribed?status=ok');
 };

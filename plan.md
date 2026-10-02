@@ -1,7 +1,7 @@
 # Plan: StarSync — Daily Vedic Astrology Product for Gen-Z/IT Professionals
 
 **Date:** 2026-09-30
-**Status:** Updated — 2026-10-01 (v4 — migrated hosting from Cloudflare Pages to Cloudflare Workers)
+**Status:** Updated — 2026-10-02 (v5 — removed payment step from signup; built, not yet deployed)
 
 ## Context
 
@@ -76,15 +76,18 @@ have.
   accurate UTC birth instant to compute from (`src/lib/geocoding.ts`). Still needed even without
   ProKerala, since converting "2pm in [city]" to the correct UTC instant requires knowing that city's
   historical offset. No paid API/account needed for this step.
-- **Payments:** Razorpay Subscriptions (`src/lib/razorpay.ts`). Trial via `start_at` (now + 5 days) on
-  `subscriptions.create` — no charge until then. UPI Autopay e-mandate + card e-mandate both supported
-  in the same flow; ₹11.11/week is well within the ₹15,000 frictionless-debit limit.
-  **Open question to confirm in the Razorpay dashboard:** whether UPI Autopay mandate registration
-  triggers a small visible authorization charge during signup even though the trial itself is free —
-  affects trial copy and must be checked before launch.
-  Webhooks still to implement (not built this pass): `subscription.authenticated`, `.activated`,
+- **Payments:** Razorpay Subscriptions. **As of 2026-10-02, no longer created at signup** — signup
+  requires zero payment info, full stop (removed after real abandonment data: 2 of 4 observed
+  signups closed the Razorpay checkout screen without authenticating, permanently stuck). The
+  customer + subscription are now created later, by `workers/daily-send` (its own
+  `src/razorpay.ts`, duplicated from the main worker's `src/lib/razorpay.ts` — which now only keeps
+  `cancelSubscription`/`verifyWebhookSignature`, no longer `createCustomer`/`createSubscription`),
+  at the day-3 payment nudge — `start_at` = the real `trial_ends_at` from signup, not a fresh 5-day
+  offset. See "Trial-conversion lifecycle" below for the full day-by-day flow. ₹11.11/week is well
+  within UPI Autopay's ₹15,000 frictionless-debit limit either way.
+  Webhooks (`src/pages/api/razorpay-webhook.ts`, built): `subscription.authenticated`, `.activated`,
   `.charged`, `.pending`, `.halted`, `.cancelled`, `.paused`/`.resumed`, `payment.failed`, all verified
-  via HMAC signature.
+  via a constant-time HMAC signature check.
 - **Scheduling (not built this pass):** One Cloudflare Cron Trigger (every 15 min, requires the
   Workers **Paid** plan — Free plan's 10ms CPU budget can't support this) queries D1 for subscribers
   whose UTC-normalized send-minute matches, pushes IDs onto a Cloudflare Queue; a separate consumer
@@ -115,19 +118,45 @@ have.
   decrypting), name_encrypted, dob_encrypted, tob_encrypted, pob_encrypted, role_encrypted, rasi,
   nakshatra, pada, preferred_send_minute_utc (plaintext, not sensitive), status
   (trial/active/paused/cancelled), trial_ends_at, razorpay_customer_id, razorpay_subscription_id,
-  unsubscribe_token (unique, unguessable), created_at, updated_at.
+  razorpay_subscription_url (added 2026-10-02 — all three now NULL until the day-3 payment nudge,
+  not populated at signup), last_sent_date, unsubscribe_token (unique, unguessable), created_at,
+  updated_at.
 - `billing_events`: audit trail of Razorpay webhooks (not yet populated — webhook handler not built).
 - `delivery_log`: per-send status (not yet populated — cron/consumer not built).
 
-### Flows built this pass
+### Flows
 
-- **Onboarding → trial → billing** (`src/pages/api/signup.ts`): validate → dedupe check by
-  `email_hash` → geocode + resolve UTC birth instant → compute rasi/nakshatra/pada in-process
-  (`vedic.ts`) → encrypt all PII fields → create Razorpay customer + subscription (5-day trial
-  `start_at`) → insert D1 row → return `subscriptionId` + public `razorpayKeyId` to the client, which
-  opens Razorpay Checkout to authorize the UPI/card mandate (`src/pages/index.astro`).
-- **Unsubscribe** (`src/pages/api/unsubscribe.ts`): token lookup → cancel Razorpay subscription →
-  delete the subscriber row immediately → redirect to `/unsubscribed`.
+- **Onboarding → trial** (`src/pages/api/signup.ts`): validate → dedupe check by `email_hash` (if an
+  existing row was never authenticated per `billing_events`, treat it as an abandoned checkout: cancel
+  the stale Razorpay subscription, delete the row, let the retry proceed as new) → geocode + resolve
+  UTC birth instant → compute rasi/nakshatra/pada in-process (`vedic.ts`) → encrypt all PII fields →
+  insert D1 row (`status='trial'`, no Razorpay fields yet) → enqueue an immediate reading onto
+  `DAILY_SEND_QUEUE` → confirmation screen shows directly, no payment step (`src/pages/index.astro`).
+- **Unsubscribe** (`src/pages/api/unsubscribe.ts`): token lookup → cancel Razorpay subscription (if
+  one exists) → delete the subscriber row immediately → redirect to `/unsubscribed`.
+
+### Trial-conversion lifecycle (`workers/daily-send/src/index.ts`, built 2026-10-02)
+
+No payment info is collected at signup — the trial is nudged toward payment entirely via email,
+computed from `trial_ends_at` (day-count is UTC calendar-date math, not time-of-day):
+- **Days 1–2, 4:** normal reading, unchanged.
+- **Day 3 / day 5** (`trial_ends_at` − 2 / exactly): normal reading + a payment-nudge CTA appended.
+  First time this fires, creates the Razorpay customer + subscription (`ensureRazorpaySubscription`)
+  and persists `razorpay_customer_id`/`_subscription_id`/`_subscription_url` (new column, see
+  `db/migrations/0003_add_subscription_url.sql`); day 5 reuses day 3's stored link.
+- **Day 6 / day 7** (+1 / +2 days past `trial_ends_at`): trial's over — standalone "subscription
+  email" instead of a reading (same visual shell, just the nudge).
+- **Days 8–9:** silent — no email, data not yet deleted.
+- **Day 10** (+5 days): if still `status='trial'` with no `billing_events` ever, cancel the stale
+  subscription (best-effort) and delete the row — same pattern as `/api/signup`'s abandoned-checkout
+  cleanup.
+- **Whenever `subscription.authenticated` actually fires** (any day): the webhook enqueues
+  `{reason: 'authenticated'}`, which skips all of the above and sends a short "payment confirmed"
+  email instead of a redundant second "welcome" reading.
+This required duplicating Razorpay customer/subscription creation into `workers/daily-send/src/razorpay.ts`
+(new secrets on that Worker: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_PLAN_ID`) — same
+established precedent as `encryption.ts` already being duplicated across both Workers rather than
+shared, since they're two separate build pipelines.
 
 ## Design direction (onboarding + privacy pages)
 

@@ -79,12 +79,16 @@ export const POST: APIRoute = async ({ request }) => {
     if (event === 'subscription.cancelled') {
       // Matches /api/unsubscribe's privacy stance: cancelled billing means
       // the PII row goes too, immediately, not just a status flip.
+      // delivery_log has a hard FK to subscribers (no CASCADE) and must go
+      // first; billing_events deliberately has no such FK (see schema.sql)
+      // so this inserted row survives as the retained audit trail.
       await env.DB.batch([
         env.DB.prepare('INSERT INTO billing_events (id, subscriber_id, event_type) VALUES (?, ?, ?)').bind(
           crypto.randomUUID(),
           subscriber.id,
           event,
         ),
+        env.DB.prepare('DELETE FROM delivery_log WHERE subscriber_id = ?').bind(subscriber.id),
         env.DB.prepare('DELETE FROM subscribers WHERE id = ?').bind(subscriber.id),
       ]);
     } else {
@@ -107,13 +111,13 @@ export const POST: APIRoute = async ({ request }) => {
       await env.DB.batch(statements);
 
       if (event === 'subscription.authenticated') {
-        // Mandate just got confirmed — send a welcome reading right away
-        // instead of making them wait for their chosen daily time slot.
-        // Reuses the exact same queue/consumer the daily cron does, so
-        // there's no duplicate content-generation code to maintain, and
-        // processSubscriber's own last_sent_date check still protects
-        // against a duplicate send if Razorpay retries this webhook.
-        await env.DAILY_SEND_QUEUE.send({ subscriberId: subscriber.id });
+        // Mandate just got confirmed. Under the no-payment-at-signup flow,
+        // this subscriber has already been getting daily readings since
+        // day 0 — a "welcome, here's your reading" would be redundant and
+        // confusing. Send a short "payment confirmed" email instead; the
+        // reason flag tells processSubscriber to skip the day-count/nudge
+        // branching entirely and just send that.
+        await env.DAILY_SEND_QUEUE.send({ subscriberId: subscriber.id, reason: 'authenticated' });
       }
     }
   } catch (err) {
