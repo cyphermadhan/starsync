@@ -62,25 +62,47 @@ import ParticleBackground from '../components/ParticleBackground.astro';
       <p class="reading-hook" id="reading-hook"></p>
 
       <div class="reading-section">
-        <div class="reading-label">Your core energy</div>
+        <div class="reading-label-row">
+          <img src="https://starsync.familyfirstapps.com/email/core-energy.png" width="20" height="20" alt="" class="reading-icon" />
+          <div class="reading-label">Your core energy</div>
+        </div>
         <p id="reading-core-energy"></p>
       </div>
       <div class="reading-section">
-        <div class="reading-label">Love &amp; relationships</div>
+        <div class="reading-label-row">
+          <img src="https://starsync.familyfirstapps.com/email/work-productivity.png" width="20" height="20" alt="" class="reading-icon" />
+          <div class="reading-label">Work &amp; productivity</div>
+        </div>
+        <p id="reading-work"></p>
+      </div>
+      <div class="reading-section">
+        <div class="reading-label-row">
+          <img src="https://starsync.familyfirstapps.com/email/love-relationship.png" width="20" height="20" alt="" class="reading-icon" />
+          <div class="reading-label">Love &amp; relationships</div>
+        </div>
         <p id="reading-love"></p>
       </div>
       <div class="reading-section">
-        <div class="reading-label">Social dynamics</div>
+        <div class="reading-label-row">
+          <img src="https://starsync.familyfirstapps.com/email/social-dynamics.png" width="20" height="20" alt="" class="reading-icon" />
+          <div class="reading-label">Social dynamics</div>
+        </div>
         <p id="reading-social"></p>
       </div>
 
       <div class="reading-dos-donts">
         <div>
-          <div class="reading-label reading-label-do">Do's</div>
+          <div class="reading-label-row">
+            <img src="https://starsync.familyfirstapps.com/email/dos.png" width="20" height="20" alt="" class="reading-icon" />
+            <div class="reading-label reading-label-do">Do's</div>
+          </div>
           <ul id="reading-dos"></ul>
         </div>
         <div>
-          <div class="reading-label reading-label-dont">Don'ts</div>
+          <div class="reading-label-row">
+            <img src="https://starsync.familyfirstapps.com/email/donts.png" width="20" height="20" alt="" class="reading-icon" />
+            <div class="reading-label reading-label-dont">Don'ts</div>
+          </div>
           <ul id="reading-donts"></ul>
         </div>
       </div>
@@ -189,6 +211,7 @@ import ParticleBackground from '../components/ParticleBackground.astro';
     interface PreviewContent {
       hook: string;
       coreEnergy: string;
+      workProductivity: string;
       loveRelationships: string;
       socialDynamics: string;
       dos: string[];
@@ -247,6 +270,7 @@ import ParticleBackground from '../components/ParticleBackground.astro';
     function renderReading(content: PreviewContent) {
       (document.getElementById('reading-hook') as HTMLElement).textContent = content.hook;
       (document.getElementById('reading-core-energy') as HTMLElement).textContent = content.coreEnergy;
+      (document.getElementById('reading-work') as HTMLElement).textContent = content.workProductivity;
       (document.getElementById('reading-love') as HTMLElement).textContent = content.loveRelationships;
       (document.getElementById('reading-social') as HTMLElement).textContent = content.socialDynamics;
 
@@ -612,6 +636,11 @@ import ParticleBackground from '../components/ParticleBackground.astro';
     }
 
     .reading-hook {
+      /* Base.astro's global `p { color: var(--text-muted) }` rule applies
+         to every <p>, including this one — explicit color needed here to
+         actually get the full #121212 instead of the 64%-opacity muted
+         shade that rule would otherwise win with. */
+      color: var(--text);
       font-size: 1.2rem;
       font-weight: 600;
       line-height: 1.4;
@@ -621,9 +650,19 @@ import ParticleBackground from '../components/ParticleBackground.astro';
       margin-bottom: 18px;
     }
     .reading-section p {
+      color: var(--text);
       margin: 4px 0 0;
       font-size: 0.92rem;
       line-height: 1.5;
+    }
+    .reading-label-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .reading-icon {
+      display: block;
+      flex-shrink: 0;
     }
     .reading-label {
       font-size: 0.72rem;
@@ -639,6 +678,7 @@ import ParticleBackground from '../components/ParticleBackground.astro';
       margin-bottom: 20px;
     }
     .reading-dos-donts ul {
+      color: var(--text);
       margin: 6px 0 0;
       padding-left: 18px;
       font-size: 0.88rem;
