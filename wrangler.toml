@@ -15,6 +15,15 @@ name = "SIGNUP_RATE_LIMITER"
 namespace_id = "1001"
 simple = { limit = 5, period = 60 }
 
+# Burst protection for /api/preview (idea-v2's instant free reading) — the
+# actual "3 free tries/day" business rule lives in D1 (preview_quota table),
+# since this native binding's max period is 60s and can't express a daily
+# window. This just stops rapid-fire abuse within a short window.
+[[ratelimits]]
+name = "PREVIEW_RATE_LIMITER"
+namespace_id = "1002"
+simple = { limit = 5, period = 60 }
+
 # Lets the Razorpay webhook handler enqueue an immediate "welcome" reading
 # on subscription.authenticated, onto the exact same queue the daily cron
 # in workers/daily-send already consumes from — same binding name there too,
@@ -40,7 +49,12 @@ queue = "starsync-daily-send"
 
 # Secrets (set with `wrangler secret put <NAME>`, never committed):
 # ENCRYPTION_KEY, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET,
-# RAZORPAY_PLAN_ID
+# RAZORPAY_PLAN_ID, OPENAI_API_KEY
+#
+# OPENAI_API_KEY (idea-v2): used only by src/lib/preview-openai.ts for the
+# instant free preview reading — same key value as workers/daily-send's,
+# duplicated per-worker same as ENCRYPTION_KEY/the Razorpay secrets already
+# are, since these are separate build pipelines.
 #
 # Rasi/Nakshatra are computed in-process (src/lib/vedic.ts) — no astrology
 # API or key needed.

@@ -1,41 +1,29 @@
 ---
 import Base from '../layouts/Base.astro';
+import ParticleBackground from '../components/ParticleBackground.astro';
 ---
 <Base
   title="StarSync — Get your daily reading"
-  description="Drop your email once. Wake up to a personalized Vedic astrology forecast every single morning."
+  description="See your reading free, right now — no email needed. Like it? Get one every morning."
   hideTopbar
   hideFooter
 >
-  <link rel="preload" as="image" href="/hero-bg.webp" />
-  <div class="particle-bg" id="particle-bg" aria-hidden="true" slot="background">
-    <canvas id="pr-output" class="pr-output"></canvas>
-  </div>
+  <ParticleBackground slot="background" />
 
   <section class="card" id="signup-card">
     <div class="card-header">
       <a href="/" class="logo-link">
-        <img src="/starsync-logo.svg" alt="StarSync" width="112" height="23" class="logo" />
+        <img src="/starsync-logo-dark.svg" alt="StarSync" width="112" height="23" class="logo" />
       </a>
       <a href="/privacy" class="privacy-link">Privacy</a>
     </div>
 
-    <div class="intro">
+    <div class="intro" id="intro">
       <h1>Get your daily reading.</h1>
-      <p class="lede">Drop your email once. Wake up to a personalized forecast every single morning.</p>
+      <p class="lede">See today's reading free, right now!</p>
     </div>
 
-    <form id="signup-form" novalidate>
-      <div class="field">
-        <label for="name">Name</label>
-        <input id="name" name="name" type="text" required autocomplete="name" />
-      </div>
-
-      <div class="field">
-        <label for="email">Email</label>
-        <input id="email" name="email" type="email" required autocomplete="email" />
-      </div>
-
+    <form id="preview-form" novalidate>
       <div class="row">
         <div class="field">
           <label>Date of birth</label>
@@ -62,6 +50,59 @@ import Base from '../layouts/Base.astro';
       <div class="field">
         <label for="pob">Place of birth</label>
         <input id="pob" name="pob" type="text" placeholder="City, Country" required />
+      </div>
+
+      <button type="submit" id="preview-submit-btn">Get today's reading</button>
+
+      <p class="footnote">We don't store your birth details.</p>
+      <p class="error" id="preview-error" role="alert" hidden></p>
+    </form>
+
+    <div class="reading-result" id="reading-result" hidden>
+      <p class="reading-hook" id="reading-hook"></p>
+
+      <div class="reading-section">
+        <div class="reading-label">Your core energy</div>
+        <p id="reading-core-energy"></p>
+      </div>
+      <div class="reading-section">
+        <div class="reading-label">Love &amp; relationships</div>
+        <p id="reading-love"></p>
+      </div>
+      <div class="reading-section">
+        <div class="reading-label">Social dynamics</div>
+        <p id="reading-social"></p>
+      </div>
+
+      <div class="reading-dos-donts">
+        <div>
+          <div class="reading-label reading-label-do">Do's</div>
+          <ul id="reading-dos"></ul>
+        </div>
+        <div>
+          <div class="reading-label reading-label-dont">Don'ts</div>
+          <ul id="reading-donts"></ul>
+        </div>
+      </div>
+
+      <p class="reading-quote" id="reading-quote"></p>
+
+      <div class="subscribe-prompt" id="subscribe-prompt">
+        <p>Want this every morning?</p>
+        <button type="button" id="want-daily-btn">Yes, sync my stars</button>
+        <button type="button" id="not-now-btn">Not right now</button>
+      </div>
+    </div>
+
+    <form id="subscribe-form" novalidate hidden>
+      <div class="field">
+        <label for="name">Name</label>
+        <input id="name" name="name" type="text" required autocomplete="name" />
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" required autocomplete="email" />
       </div>
 
       <div class="field">
@@ -104,10 +145,10 @@ import Base from '../layouts/Base.astro';
         </label>
       </div>
 
-      <button type="submit" id="submit-btn">Sync my stars for free</button>
+      <button type="submit" id="subscribe-submit-btn">Sync my stars for free</button>
 
       <p class="footnote">End-to-end encrypted. Not even we can read your birth details.</p>
-      <p class="error" id="form-error" role="alert"></p>
+      <p class="error" id="subscribe-error" role="alert" hidden></p>
     </form>
 
     <div class="confirmation" id="confirmation" hidden>
@@ -121,50 +162,6 @@ import Base from '../layouts/Base.astro';
   </section>
 
   <p class="disclaimer">Disclaimer: Read-only data for reflection and entertainment.</p>
-
-  <script>
-    import { createParticleReveal } from '../lib/particle-reveal';
-
-    const bg = document.getElementById('particle-bg');
-    const output = document.getElementById('pr-output') as HTMLCanvasElement | null;
-
-    function renderPlainFallback() {
-      output?.remove();
-      const img = document.createElement('img');
-      img.src = '/hero-bg.webp';
-      img.alt = '';
-      img.className = 'pr-image is-ready';
-      bg?.appendChild(img);
-    }
-
-    // The effect is a cursor-hover interaction with no real equivalent on
-    // touch — there's no persistent hover position to reveal around — and
-    // mobile browsers are also prone to repainting fixed WebGL canvases
-    // during scroll, causing a visible flicker. Skip straight to the plain
-    // image on devices with no fine hover-capable pointer (i.e. touch-only).
-    const hasHoverPointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-
-    if (bg && output && hasHoverPointer) {
-      const image = new Image();
-      image.src = '/hero-bg.webp';
-      image
-        .decode()
-        .then(() => {
-          const instance = createParticleReveal(
-            { image, output },
-            { radius: 850, softness: 0.9, size: 0.3, background: '#08080d' },
-          );
-          if (instance) {
-            output.classList.add('is-ready');
-          } else {
-            renderPlainFallback();
-          }
-        })
-        .catch(() => renderPlainFallback());
-    } else if (bg) {
-      renderPlainFallback();
-    }
-  </script>
 
   <script>
     // Auto-advance + backspace-to-previous for the DD/MM/YYYY and HH/MM/AM-PM
@@ -189,10 +186,34 @@ import Base from '../layouts/Base.astro';
   </script>
 
   <script>
-    const form = document.getElementById('signup-form') as HTMLFormElement;
-    const errorEl = document.getElementById('form-error') as HTMLParagraphElement;
-    const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+    interface PreviewContent {
+      hook: string;
+      coreEnergy: string;
+      loveRelationships: string;
+      socialDynamics: string;
+      dos: string[];
+      donts: string[];
+      quote: string;
+    }
+
+    const previewForm = document.getElementById('preview-form') as HTMLFormElement;
+    const previewErrorEl = document.getElementById('preview-error') as HTMLParagraphElement;
+    const previewSubmitBtn = document.getElementById('preview-submit-btn') as HTMLButtonElement;
+    const readingResult = document.getElementById('reading-result') as HTMLElement;
+    const subscribePrompt = document.getElementById('subscribe-prompt') as HTMLElement;
+    const wantDailyBtn = document.getElementById('want-daily-btn') as HTMLButtonElement;
+    const notNowBtn = document.getElementById('not-now-btn') as HTMLButtonElement;
+
+    const subscribeForm = document.getElementById('subscribe-form') as HTMLFormElement;
+    const subscribeErrorEl = document.getElementById('subscribe-error') as HTMLParagraphElement;
+    const subscribeSubmitBtn = document.getElementById('subscribe-submit-btn') as HTMLButtonElement;
     const confirmation = document.getElementById('confirmation') as HTMLElement;
+    const intro = document.getElementById('intro') as HTMLElement;
+
+    function setError(el: HTMLParagraphElement, message: string) {
+      el.textContent = message;
+      el.hidden = message === '';
+    }
 
     function seg(groupId: string, selector: string): string {
       return (document.querySelector(`#${groupId} ${selector}`) as HTMLInputElement | HTMLSelectElement)?.value ?? '';
@@ -218,40 +239,121 @@ import Base from '../layouts/Base.astro';
       return to24Hour(hour, minute, ampm);
     }
 
-    form.addEventListener('submit', async (event) => {
+    // Carried from step 1 (preview) into step 2 (subscribe) — not re-asked.
+    let capturedDob = '';
+    let capturedTob = '';
+    let capturedPob = '';
+
+    function renderReading(content: PreviewContent) {
+      (document.getElementById('reading-hook') as HTMLElement).textContent = content.hook;
+      (document.getElementById('reading-core-energy') as HTMLElement).textContent = content.coreEnergy;
+      (document.getElementById('reading-love') as HTMLElement).textContent = content.loveRelationships;
+      (document.getElementById('reading-social') as HTMLElement).textContent = content.socialDynamics;
+
+      const dosList = document.getElementById('reading-dos') as HTMLUListElement;
+      dosList.innerHTML = '';
+      content.dos.forEach((item) => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        dosList.appendChild(li);
+      });
+
+      const dontsList = document.getElementById('reading-donts') as HTMLUListElement;
+      dontsList.innerHTML = '';
+      content.donts.forEach((item) => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        dontsList.appendChild(li);
+      });
+
+      (document.getElementById('reading-quote') as HTMLElement).textContent = `"${content.quote}"`;
+    }
+
+    previewForm.addEventListener('submit', async (event) => {
       event.preventDefault();
-      errorEl.textContent = '';
+      setError(previewErrorEl, '');
 
       const dobDay = seg('dob-segmented', '.seg-day');
       const dobMonth = seg('dob-segmented', '.seg-month');
       const dobYear = seg('dob-segmented', '.seg-year');
       const tobHour = seg('tob-segmented', '.seg-hour');
       const tobMinute = seg('tob-segmented', '.seg-minute');
-      const sendHour = seg('send-segmented', '.seg-hour');
-      const sendMinute = seg('send-segmented', '.seg-minute');
 
       if (!dobDay || !dobMonth || !dobYear || Number(dobDay) < 1 || Number(dobDay) > 31 || Number(dobMonth) < 1 || Number(dobMonth) > 12) {
-        errorEl.textContent = 'Enter a valid date of birth.';
+        setError(previewErrorEl, 'Enter a valid date of birth.');
         return;
       }
       if (!tobHour || !tobMinute || Number(tobHour) < 1 || Number(tobHour) > 12 || Number(tobMinute) > 59) {
-        errorEl.textContent = 'Enter a valid time of birth.';
-        return;
-      }
-      if (!sendHour || !sendMinute || Number(sendHour) < 1 || Number(sendHour) > 12 || Number(sendMinute) > 59) {
-        errorEl.textContent = 'Enter a valid delivery time.';
+        setError(previewErrorEl, 'Enter a valid time of birth.');
         return;
       }
 
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Syncing...';
+      previewSubmitBtn.disabled = true;
+      previewSubmitBtn.textContent = 'Reading the stars...';
 
       try {
-        const formData = new FormData(form);
+        capturedDob = buildDob();
+        capturedTob = buildTime('tob-segmented');
+        capturedPob = (document.getElementById('pob') as HTMLInputElement).value;
+
+        const res = await fetch('/api/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dob: capturedDob, tob: capturedTob, pob: capturedPob }),
+        });
+
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(body.error ?? 'Something went wrong. Please try again.');
+        }
+
+        const { content } = (await res.json()) as { content: PreviewContent };
+        renderReading(content);
+
+        intro.hidden = true;
+        previewForm.hidden = true;
+        readingResult.hidden = false;
+      } catch (err) {
+        setError(previewErrorEl, err instanceof Error ? err.message : 'Something went wrong.');
+      } finally {
+        previewSubmitBtn.disabled = false;
+        previewSubmitBtn.textContent = 'Get today\'s reading';
+      }
+    });
+
+    wantDailyBtn.addEventListener('click', () => {
+      subscribePrompt.hidden = true;
+      subscribeForm.hidden = false;
+      subscribeForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    notNowBtn.addEventListener('click', () => {
+      // Matches the flowchart: "if no → do nothing" — just dismiss the ask,
+      // the reading stays visible, no backend call.
+      subscribePrompt.hidden = true;
+    });
+
+    subscribeForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      setError(subscribeErrorEl, '');
+
+      const sendHour = seg('send-segmented', '.seg-hour');
+      const sendMinute = seg('send-segmented', '.seg-minute');
+      if (!sendHour || !sendMinute || Number(sendHour) < 1 || Number(sendHour) > 12 || Number(sendMinute) > 59) {
+        setError(subscribeErrorEl, 'Enter a valid delivery time.');
+        return;
+      }
+
+      subscribeSubmitBtn.disabled = true;
+      subscribeSubmitBtn.textContent = 'Syncing...';
+
+      try {
+        const formData = new FormData(subscribeForm);
         const payload = {
           ...Object.fromEntries(formData.entries()),
-          dob: buildDob(),
-          tob: buildTime('tob-segmented'),
+          dob: capturedDob,
+          tob: capturedTob,
+          pob: capturedPob,
           sendTime: buildTime('send-segmented'),
         };
 
@@ -266,63 +368,44 @@ import Base from '../layouts/Base.astro';
           throw new Error(body.error ?? 'Something went wrong. Please try again.');
         }
 
-        form.hidden = true;
+        readingResult.hidden = true;
+        subscribeForm.hidden = true;
         confirmation.hidden = false;
       } catch (err) {
-        errorEl.textContent = err instanceof Error ? err.message : 'Something went wrong.';
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Sync my stars for free';
+        setError(subscribeErrorEl, err instanceof Error ? err.message : 'Something went wrong.');
+        subscribeSubmitBtn.disabled = false;
+        subscribeSubmitBtn.textContent = 'Sync my stars for free';
       }
     });
   </script>
 
   <style>
-    .particle-bg {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      /* Forces its own GPU compositing layer — without this, mobile Safari
-         re-lays-out fixed elements during touch-scroll momentum, briefly
-         flashing whatever's behind it (body's gradient) before repainting. */
-      will-change: transform;
-      transform: translateZ(0);
-      -webkit-transform: translateZ(0);
-    }
-    .pr-output,
-    :global(.pr-image) {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      display: block;
-      border: 0;
-      /* Starts invisible — the body's CSS gradient shows through until the
-         hero image/particle effect is actually ready to draw, then this
-         fades in instead of popping in abruptly over the gradient. */
-      opacity: 0;
-      transition: opacity 0.4s ease;
-    }
-    :global(.pr-image) {
-      object-fit: cover;
-      object-position: center center;
-    }
-    .pr-output {
-      pointer-events: none;
-    }
-    .pr-output.is-ready,
-    :global(.pr-image.is-ready) {
-      opacity: 1;
-    }
-
     .card {
+      /* Scoped overrides of the global dark-theme variables — flips just
+         this card to a light theme (background, text, inputs, borders),
+         without touching the dark particle background behind it or other
+         pages that still use the global :root values. */
+      --bg: #ffffff;
+      --text: #121212;
+      --text-muted: rgba(18, 18, 18, 0.64);
+      --border: #e4e3ec;
+      /* `color` is inherited, but inheritance passes down the parent's
+         already-computed value, not a live re-evaluation of var(--text) —
+         and `body` (outside .card) computes it from the *global* --text.
+         Anything inside .card with no color rule of its own (h1, the
+         reading hook, etc.) was silently inheriting that light value
+         straight through. Setting color here is what actually makes the
+         override apply by default. */
+      color: var(--text);
+
       max-width: 560px;
-      margin: 40px auto 60px;
-      background: rgba(0, 0, 0, 0.55);
+      margin: 20vh auto 40px;
+      background: rgba(255, 255, 255, 0.55);
       backdrop-filter: blur(24px);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.85);
       border-radius: 24px;
       padding: 40px;
-      box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.3);
     }
 
     .card-header {
@@ -344,6 +427,11 @@ import Base from '../layouts/Base.astro';
       color: var(--text-muted);
       font-size: 0.85rem;
       text-decoration: underline;
+      text-decoration-style: dotted;
+      text-decoration-skip-ink: auto;
+      text-decoration-thickness: auto;
+      text-underline-offset: auto;
+      text-underline-position: from-font;
     }
 
     .intro {
@@ -411,7 +499,7 @@ import Base from '../layouts/Base.astro';
     }
     input:focus,
     select:focus {
-      outline: 2px solid var(--accent-1);
+      outline: 2px solid #47a3d4;
       outline-offset: 1px;
     }
 
@@ -420,7 +508,10 @@ import Base from '../layouts/Base.astro';
       -webkit-appearance: none;
       -moz-appearance: none;
       padding-right: 40px;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23a3a1b3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      /* Baked-in hex, not var(--text-muted) — it's an SVG data URI, can't
+         reference a CSS variable. #6b6980 instead of the old #a3a1b3 since
+         this now sits on a light input background, not a dark one. */
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%236b6980' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 14px center;
     }
@@ -472,10 +563,13 @@ import Base from '../layouts/Base.astro';
       color: var(--text-muted);
     }
 
-    button[type='submit'] {
+    button[type='submit'],
+    #preview-submit-btn {
       width: 100%;
-      background: #ffffff;
-      color: #08080d;
+      /* Dark fill now that the card itself is light — a white button
+         would have near-zero contrast against the new white card bg. */
+      background: #121212;
+      color: #ffffff;
       font-weight: 600;
       font-size: 1rem;
       border: none;
@@ -483,7 +577,8 @@ import Base from '../layouts/Base.astro';
       padding: 15px;
       cursor: pointer;
     }
-    button[type='submit']:disabled {
+    button[type='submit']:disabled,
+    #preview-submit-btn:disabled {
       opacity: 0.6;
       cursor: not-allowed;
     }
@@ -500,8 +595,8 @@ import Base from '../layouts/Base.astro';
       max-width: 560px;
       margin: 16px auto 40px;
       text-align: center;
-      font-size: 0.78rem;
-      color: var(--text-muted);
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255);
     }
 
     .error {
@@ -514,6 +609,93 @@ import Base from '../layouts/Base.astro';
 
     .confirmation h2 {
       margin-bottom: 12px;
+    }
+
+    .reading-hook {
+      font-size: 1.2rem;
+      font-weight: 600;
+      line-height: 1.4;
+      margin: 0 0 20px;
+    }
+    .reading-section {
+      margin-bottom: 18px;
+    }
+    .reading-section p {
+      margin: 4px 0 0;
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+    .reading-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .reading-dos-donts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .reading-dos-donts ul {
+      margin: 6px 0 0;
+      padding-left: 18px;
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+    .reading-label-do {
+      /* Darker than the brand teal/coral used elsewhere — the originals
+         are tuned for a dark background and go low-contrast on white. */
+      color: #0ea37f;
+    }
+    .reading-label-dont {
+      color: #d64545;
+    }
+    .reading-quote {
+      font-style: italic;
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+      margin: 20px 0 0;
+    }
+
+    .subscribe-prompt {
+      margin-top: 28px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+    .subscribe-prompt p {
+      margin: 0 0 14px;
+      font-size: 0.95rem;
+    }
+    .subscribe-prompt button {
+      border-radius: 12px;
+      padding: 13px 20px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+    }
+    #want-daily-btn {
+      background: #121212;
+      color: #ffffff;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    #not-now-btn {
+      background: transparent;
+      color: var(--text-muted);
+      text-decoration: underline;
+      width: 100%;
+    }
+
+    @media (max-width: 560px) {
+      .reading-dos-donts {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </Base>

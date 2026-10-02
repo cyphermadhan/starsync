@@ -1,0 +1,94 @@
+---
+// WebGL2 "particle reveal" hero background — the photo behind the card,
+// revealed around the cursor on hover-capable devices, with a plain <img>
+// fallback otherwise. Shared across every page that uses it (pass
+// slot="background" when placing this inside <Base>), so there's exactly
+// one copy of this script/markup/CSS to keep in sync, not one per page.
+---
+<link rel="preload" as="image" href="/hero-bg.webp" />
+<div class="particle-bg" id="particle-bg" aria-hidden="true">
+  <canvas id="pr-output" class="pr-output"></canvas>
+</div>
+
+<script>
+  import { createParticleReveal } from '../lib/particle-reveal';
+
+  const bg = document.getElementById('particle-bg');
+  const output = document.getElementById('pr-output') as HTMLCanvasElement | null;
+
+  function renderPlainFallback() {
+    output?.remove();
+    const img = document.createElement('img');
+    img.src = '/hero-bg.webp';
+    img.alt = '';
+    img.className = 'pr-image is-ready';
+    bg?.appendChild(img);
+  }
+
+  // The effect is a cursor-hover interaction with no real equivalent on
+  // touch — there's no persistent hover position to reveal around — and
+  // mobile browsers are also prone to repainting fixed WebGL canvases
+  // during scroll, causing a visible flicker. Skip straight to the plain
+  // image on devices with no fine hover-capable pointer (i.e. touch-only).
+  const hasHoverPointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  if (bg && output && hasHoverPointer) {
+    const image = new Image();
+    image.src = '/hero-bg.webp';
+    image
+      .decode()
+      .then(() => {
+        const instance = createParticleReveal(
+          { image, output },
+          { radius: 850, softness: 0.9, size: 0.3, background: '#08080d' },
+        );
+        if (instance) {
+          output.classList.add('is-ready');
+        } else {
+          renderPlainFallback();
+        }
+      })
+      .catch(() => renderPlainFallback());
+  } else if (bg) {
+    renderPlainFallback();
+  }
+</script>
+
+<style>
+  .particle-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    /* Forces its own GPU compositing layer — without this, mobile Safari
+       re-lays-out fixed elements during touch-scroll momentum, briefly
+       flashing whatever's behind it (body's gradient) before repainting. */
+    will-change: transform;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+  .pr-output,
+  :global(.pr-image) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    border: 0;
+    /* Starts invisible — the body's CSS gradient shows through until the
+       hero image/particle effect is actually ready to draw, then this
+       fades in instead of popping in abruptly over the gradient. */
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  :global(.pr-image) {
+    object-fit: cover;
+    object-position: center center;
+  }
+  .pr-output {
+    pointer-events: none;
+  }
+  .pr-output.is-ready,
+  :global(.pr-image.is-ready) {
+    opacity: 1;
+  }
+</style>

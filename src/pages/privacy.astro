@@ -1,68 +1,123 @@
 ---
 import Base from '../layouts/Base.astro';
+import ParticleBackground from '../components/ParticleBackground.astro';
 ---
-<Base title="Privacy — StarSync" description="How StarSync handles your data, in plain language.">
-  <section class="privacy">
-    <h1>Privacy, in plain language</h1>
-    <p class="lede">No legal-speak. Here's exactly what we collect, why, and what we do — and don't do — with it.</p>
+<Base title="Privacy — StarSync" description="How StarSync handles your data, in plain language." hideTopbar hideFooter>
+  <ParticleBackground slot="background" />
 
-    <h2>What we collect</h2>
-    <p>At signup: your name, email, date of birth, time of birth, place of birth, your role
-    (engineering, design, student, etc.), and the time you want your daily email. That's it —
-    no location tracking, no social profiles, no browsing history.</p>
+  <section class="card">
+    <div class="card-header">
+      <a href="/" class="logo-link">
+        <img src="/starsync-logo-dark.svg" alt="StarSync" width="112" height="23" class="logo" />
+      </a>
+      <a href="/" class="back-link">Home</a>
+    </div>
 
-    <h2>Why we need it</h2>
-    <p>Your date, time, and place of birth are used <strong>once</strong>, at signup, to calculate
-    your rasi (moon sign) and nakshatra — using open astronomical formulas that run entirely on our
-    own server, not a third-party astrology service. We store the result of that calculation, not
-    your raw coordinates. Your role is used to make the daily content actually relevant to your day
-    instead of generic.</p>
+    <div class="privacy">
+      <h1>Privacy, in plain language</h1>
+      <p class="lede">No legal-speak. Here's exactly what we collect, why, and what we do — and don't do — with it.</p>
 
-    <h2>How it's protected</h2>
-    <p>Your birth details are encrypted (AES-256-GCM) the moment they reach our server, before
-    they're ever written to a database. The decryption key lives only in our server's secret
-    store — there's no dashboard, admin panel, or support tool that can display your decrypted
-    information. It's decrypted automatically, in memory, only at the moment your daily email is
-    generated, and never logged or persisted in decrypted form. No one on our team can casually
-    "look up" your birth chart, because there's nothing built that lets us.</p>
+      <h2>What we collect</h2>
+      <p>At signup: your name, email, date of birth, time of birth, place of birth, your role
+      (engineering, design, student, etc.), and the time you want your daily email. That's it —
+      no location tracking, no social profiles, no browsing history.</p>
 
-    <h2>What we don't do</h2>
-    <ul>
-      <li>We don't sell or share your data with advertisers or data brokers.</li>
-      <li>We don't have astrologers or humans reviewing your birth details.</li>
-      <li>We don't use your data to train any AI model.</li>
-    </ul>
+      <h2>Why we need it</h2>
+      <p>Your date, time, and place of birth are used <strong>once</strong>, at signup, to calculate
+      your rasi (moon sign) and nakshatra — using open astronomical formulas that run entirely on our
+      own server, not a third-party astrology service. We store the result of that calculation, not
+      your raw coordinates. Your role is used to make the daily content actually relevant to your day
+      instead of generic.</p>
 
-    <h2>Payments</h2>
-    <p>Payments and UPI Autopay / card mandates are handled entirely by Razorpay, a licensed
-    payment processor. We never see or store your full card number or UPI PIN — Razorpay passes
-    us only a subscription status.</p>
+      <h2>How it's protected</h2>
+      <p>Your birth details are encrypted (AES-256-GCM) the moment they reach our server, before
+      they're ever written to a database. The decryption key lives only in our server's secret
+      store — there's no dashboard, admin panel, or support tool that can display your decrypted
+      information. It's decrypted automatically, in memory, only at the moment your daily email is
+      generated, and never logged or persisted in decrypted form. No one on our team can casually
+      "look up" your birth chart, because there's nothing built that lets us.</p>
 
-    <h2>Deleting your data</h2>
-    <p>Unsubscribing — from any email we send, in one click — cancels your subscription
-    immediately and deletes your personal data from our systems right away. We keep a minimal,
-    anonymized billing record only as long as accounting/tax rules require, never your birth
-    details.</p>
+      <h2>What we don't do</h2>
+      <ul>
+        <li>We don't sell or share your data with advertisers or data brokers.</li>
+        <li>We don't have astrologers or humans reviewing your birth details.</li>
+        <li>We don't use your data to train any AI model.</li>
+      </ul>
 
-    <h2>Questions</h2>
-    <p>Reach out any time at <a href="mailto:privacy@familyfirstapps.com">privacy@familyfirstapps.com</a>.</p>
+      <h2>Trying a reading before you subscribe</h2>
+      <p>You can see a free reading on the site itself before giving us your email at all. Your
+      birth details for that preview are used only in memory, to compute your chart, and never
+      stored — nothing links that preview back to you. We do briefly keep a hashed (not raw) record
+      of your IP address, only to enforce the 3-free-tries-per-day limit, and only for that day.</p>
+
+      <h2>Payments</h2>
+      <p>Payments and UPI Autopay / card mandates are handled entirely by Razorpay, a licensed
+      payment processor. We never see or store your full card number or UPI PIN — Razorpay passes
+      us only a subscription status.</p>
+
+      <h2>Deleting your data</h2>
+      <p>Unsubscribing — from any email we send, in one click — cancels your subscription
+      immediately and deletes your personal data from our systems right away. We keep a minimal,
+      anonymized billing record only as long as accounting/tax rules require, never your birth
+      details.</p>
+
+      <h2>Questions</h2>
+      <p>Reach out any time at <a href="mailto:privacy@familyfirstapps.com">privacy@familyfirstapps.com</a>.</p>
+    </div>
   </section>
 
   <style>
-    .privacy {
-      padding: 40px 0 20px;
+    .card {
+      /* Same scoped light-theme treatment as the homepage card — flips
+         just this card to a light theme without touching the dark global
+         :root values other pages still use. */
+      --bg: #ffffff;
+      --text: #121212;
+      --text-muted: rgba(18, 18, 18, 0.64);
+      --border: #e4e3ec;
+      color: var(--text);
+
       max-width: 680px;
+      margin: 20vh auto 60px;
+      background: rgba(255, 255, 255, 0.55);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.3);
     }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+    .logo-link {
+      display: flex;
+      color: var(--text);
+    }
+    .logo {
+      display: block;
+      height: 20px;
+      width: auto;
+    }
+    .back-link {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-decoration: underline;
+    }
+
     .privacy h1 {
-      font-size: clamp(2rem, 4vw, 2.6rem);
+      font-size: clamp(1.8rem, 4vw, 2.2rem);
     }
     .lede {
       margin-top: 14px;
       font-size: 1.05rem;
     }
     .privacy h2 {
-      font-size: 1.15rem;
-      margin-top: 36px;
+      font-size: 1.1rem;
+      margin-top: 32px;
       margin-bottom: 10px;
       color: var(--text);
     }
@@ -73,6 +128,12 @@ import Base from '../layouts/Base.astro';
     .privacy ul {
       padding-left: 20px;
       line-height: 1.7;
+    }
+
+    @media (max-width: 560px) {
+      .card {
+        padding: 28px 20px;
+      }
     }
   </style>
 </Base>

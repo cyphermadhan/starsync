@@ -7,3 +7,4 @@ dist/
 *.log
 .claude/
 worker-configuration.d.ts
+.DS_Store

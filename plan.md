@@ -3,6 +3,18 @@
 **Date:** 2026-09-30
 **Status:** Updated — 2026-10-02 (v5 — removed payment step from signup; built, not yet deployed)
 
+## Branch: `idea-v2` — instant free preview reading (in progress, not on `main`)
+
+Alternate flow the user sketched in Excalidraw, explored on a separate branch rather than
+`main`: let anyone try an instant reading on the site with just birth details (no email), rate
+limited to 3 free tries/day per IP, with the reading cached permanently per
+rasi+nakshatra+pada combo (evergreen content, not day-specific, no role personalization) rather
+than generated fresh per request. Only after seeing it do they get asked to subscribe for daily
+delivery — which reuses the existing `/api/signup` flow unchanged. New DB tables
+(`preview_readings`, `preview_quota`), a new OpenAI integration point in the main `starsync`
+worker (previously only in `workers/daily-send`), and a two-step restructuring of the homepage
+form. Full design in this session's plan file; `workers/daily-send` is untouched by this branch.
+
 ## Context
 
 `modern-raasi-palan` is currently an empty repo. The goal: a fun, Gen-Z/IT-coded daily astrology
