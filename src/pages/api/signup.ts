@@ -3,7 +3,7 @@ import { env } from 'cloudflare:workers';
 import { encryptField, generateToken, sha256Hex } from '../../lib/encryption';
 import { geocodePlaceOfBirth, toUtcDate } from '../../lib/geocoding';
 import { computeVedicChart } from '../../lib/vedic';
-import { createCustomer, createSubscription } from '../../lib/razorpay';
+import { cancelSubscription, createCustomer, createSubscription } from '../../lib/razorpay';
 
 const TRIAL_DAYS = 5;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -68,14 +68,41 @@ export const POST: APIRoute = async ({ request }) => {
   const data = payload as SignupPayload;
 
   const emailHash = await sha256Hex(data.email);
-  const existing = await env.DB.prepare('SELECT id FROM subscribers WHERE email_hash = ?')
+  const existing = await env.DB.prepare(
+    'SELECT id, razorpay_subscription_id FROM subscribers WHERE email_hash = ?',
+  )
     .bind(emailHash)
-    .first();
+    .first<{ id: string; razorpay_subscription_id: string | null }>();
+
   if (existing) {
-    return Response.json(
-      { error: 'You already have a StarSync subscription with this email.' },
-      { status: 409 },
-    );
+    // billing_events only ever gets a row via a real Razorpay webhook — so
+    // its absence means the mandate was never authenticated: this is a
+    // closed/abandoned checkout, not a real duplicate. Clean it up and let
+    // them retry instead of permanently locking the email out.
+    const everAuthenticated = await env.DB.prepare(
+      'SELECT 1 FROM billing_events WHERE subscriber_id = ? LIMIT 1',
+    )
+      .bind(existing.id)
+      .first();
+
+    if (everAuthenticated) {
+      return Response.json(
+        { error: 'You already have a StarSync subscription with this email.' },
+        { status: 409 },
+      );
+    }
+
+    if (existing.razorpay_subscription_id) {
+      try {
+        await cancelSubscription(existing.razorpay_subscription_id, env.RAZORPAY_KEY_ID, env.RAZORPAY_KEY_SECRET);
+      } catch (err) {
+        // Best-effort — Razorpay may have already expired/cancelled it on
+        // its own, or this call fails for some other reason. Either way,
+        // don't block the retry over tidying up Razorpay's dashboard.
+        console.error(`Failed to cancel abandoned subscription ${existing.razorpay_subscription_id}:`, err);
+      }
+    }
+    await env.DB.prepare('DELETE FROM subscribers WHERE id = ?').bind(existing.id).run();
   }
 
   let chart: { rasi: string; nakshatra: string; pada: number };

@@ -28,7 +28,11 @@ export async function createCustomer(
       Authorization: authHeader(keyId, keySecret),
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ name, email, fail_existing: 0 }),
+    // Must be the string "0", not the number 0 — Razorpay's API silently
+    // treats a non-string value as unset and defaults to failing instead
+    // of returning the existing customer (confirmed against their docs
+    // after hitting exactly this in production).
+    body: JSON.stringify({ name, email, fail_existing: '0' }),
   });
   if (!res.ok) {
     throw new Error(`Razorpay createCustomer failed: ${res.status} ${await res.text()}`);
