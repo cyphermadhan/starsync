@@ -1,5 +1,31 @@
 # Implementation Log
 
+## [2026-10-02] — Remove payment step from signup; nudge toward it via email
+
+- **What:** Signup no longer creates a Razorpay customer/subscription or opens a checkout modal —
+  it collects zero payment info and sends the first reading immediately. Payment is nudged via
+  email on day 3/5 (appended to the reading), day 6/7 (standalone, trial's over), expires and
+  deletes the subscriber on day 10 if never authenticated. `subscription.authenticated` now sends
+  a short confirmation email instead of a redundant "welcome" reading.
+- **Files:** `src/pages/api/signup.ts`, `src/pages/index.astro`, `src/lib/razorpay.ts`,
+  `src/pages/api/razorpay-webhook.ts`, `src/pages/api/unsubscribe.ts`,
+  `workers/daily-send/src/{index,resend,razorpay}.ts`, `db/migrations/0003_*.sql`, `0004_*.sql`.
+- **Details:**
+  - Driven by real abandonment data: 2 of 4 observed signups closed the Razorpay checkout screen
+    without authenticating, permanently stuck. Trades some trial-to-paid conversion (passive
+    mandate-already-set-up historically converts better than an active post-trial ask) for much
+    lower signup friction — deliberate bet given the ₹11.11/week price point.
+  - Found and fixed a serious pre-existing bug while testing live: every subscriber-deletion path
+    crashed with a FOREIGN KEY constraint error for anyone who'd ever received an email (which is
+    now everyone, immediately). Fixed by clearing `delivery_log` before each delete and dropping
+    the FK on `billing_events` entirely (table rebuild migration) so it can survive as the
+    intended retained billing/audit trail.
+  - Razorpay customer/subscription creation moved into `workers/daily-send` (new secrets there),
+    duplicated rather than shared — same precedent as `encryption.ts` across both workers.
+  - Verified end-to-end against production (real signup, each day-bucket branch via a temporary
+    debug trigger on a backdated test subscriber, a real unsubscribe with delivery history). All
+    test data cleaned up afterward.
+
 ## [2026-10-01] — Redesign the daily email: content structure, voice, and visuals
 
 - **What:** Rewrote the OpenAI prompt and Resend template for the daily-send worker to match a
