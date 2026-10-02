@@ -109,7 +109,11 @@ async function markSent(subscriberId: string, env: Env): Promise<void> {
 // usually), persists it, and returns the checkout url. Later calls (day 5,
 // day 6/7) just reuse the stored url instead of creating a second
 // subscription. start_at aligns with the real trial_ends_at — the trial
-// clock already started at signup, not from whenever this happens to run.
+// clock already started at signup, not from whenever this happens to run —
+// except Razorpay rejects a start_at in the past, which trial_ends_at
+// already is by day 6/7 if nothing created a subscription on day 3 or 5
+// (e.g. a sustained Razorpay outage on both of those days). Clamped
+// forward with a small buffer in that case.
 async function ensureRazorpaySubscription(
   subscriber: SubscriberRow,
   email: string,
@@ -121,7 +125,8 @@ async function ensureRazorpaySubscription(
   }
 
   const customer = await createCustomer(name, email, env.RAZORPAY_KEY_ID, env.RAZORPAY_KEY_SECRET);
-  const startAt = Math.floor(new Date(subscriber.trial_ends_at).getTime() / 1000);
+  const trialEndsAtUnix = Math.floor(new Date(subscriber.trial_ends_at).getTime() / 1000);
+  const startAt = Math.max(trialEndsAtUnix, Math.floor(Date.now() / 1000) + 300);
   const subscription = await createSubscription(
     customer.id,
     env.RAZORPAY_PLAN_ID,
