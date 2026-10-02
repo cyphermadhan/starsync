@@ -52,7 +52,10 @@ import ParticleBackground from '../components/ParticleBackground.astro';
         <input id="pob" name="pob" type="text" placeholder="City, Country" required />
       </div>
 
-      <button type="submit" id="preview-submit-btn">Get today's reading</button>
+      <button type="submit" id="preview-submit-btn">
+        <span class="btn-label">Get today's reading</span>
+        <span class="btn-loader" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
 
       <p class="footnote">We don't store your birth details.</p>
       <p class="error" id="preview-error" role="alert" hidden></p>
@@ -153,7 +156,10 @@ import ParticleBackground from '../components/ParticleBackground.astro';
         </label>
       </div>
 
-      <button type="submit" id="subscribe-submit-btn">Sync my stars</button>
+      <button type="submit" id="subscribe-submit-btn">
+        <span class="btn-label">Sync my stars</span>
+        <span class="btn-loader" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
 
       <p class="footnote">End-to-end encrypted. Not even we can read your birth details.</p>
       <p class="error" id="subscribe-error" role="alert" hidden></p>
@@ -208,6 +214,7 @@ import ParticleBackground from '../components/ParticleBackground.astro';
     const previewForm = document.getElementById('preview-form') as HTMLFormElement;
     const previewErrorEl = document.getElementById('preview-error') as HTMLParagraphElement;
     const previewSubmitBtn = document.getElementById('preview-submit-btn') as HTMLButtonElement;
+    const previewSubmitLabel = previewSubmitBtn.querySelector('.btn-label') as HTMLElement;
     const readingResult = document.getElementById('reading-result') as HTMLElement;
     const subscribePrompt = document.getElementById('subscribe-prompt') as HTMLElement;
     const wantDailyBtn = document.getElementById('want-daily-btn') as HTMLButtonElement;
@@ -216,6 +223,7 @@ import ParticleBackground from '../components/ParticleBackground.astro';
     const subscribeForm = document.getElementById('subscribe-form') as HTMLFormElement;
     const subscribeErrorEl = document.getElementById('subscribe-error') as HTMLParagraphElement;
     const subscribeSubmitBtn = document.getElementById('subscribe-submit-btn') as HTMLButtonElement;
+    const subscribeSubmitLabel = subscribeSubmitBtn.querySelector('.btn-label') as HTMLElement;
     const confirmation = document.getElementById('confirmation') as HTMLElement;
     const intro = document.getElementById('intro') as HTMLElement;
 
@@ -299,7 +307,8 @@ import ParticleBackground from '../components/ParticleBackground.astro';
       }
 
       previewSubmitBtn.disabled = true;
-      previewSubmitBtn.textContent = 'Reading the stars...';
+      previewSubmitBtn.classList.add('is-loading');
+      previewSubmitLabel.textContent = 'Reading the stars...';
 
       try {
         capturedDob = buildDob();
@@ -327,7 +336,8 @@ import ParticleBackground from '../components/ParticleBackground.astro';
         setError(previewErrorEl, err instanceof Error ? err.message : 'Something went wrong.');
       } finally {
         previewSubmitBtn.disabled = false;
-        previewSubmitBtn.textContent = 'Get today\'s reading';
+        previewSubmitBtn.classList.remove('is-loading');
+        previewSubmitLabel.textContent = 'Get today\'s reading';
       }
     });
 
@@ -355,7 +365,8 @@ import ParticleBackground from '../components/ParticleBackground.astro';
       }
 
       subscribeSubmitBtn.disabled = true;
-      subscribeSubmitBtn.textContent = 'Syncing...';
+      subscribeSubmitBtn.classList.add('is-loading');
+      subscribeSubmitLabel.textContent = 'Syncing...';
 
       try {
         const formData = new FormData(subscribeForm);
@@ -388,7 +399,8 @@ import ParticleBackground from '../components/ParticleBackground.astro';
       } catch (err) {
         setError(subscribeErrorEl, err instanceof Error ? err.message : 'Something went wrong.');
         subscribeSubmitBtn.disabled = false;
-        subscribeSubmitBtn.textContent = 'Sync my stars';
+        subscribeSubmitBtn.classList.remove('is-loading');
+        subscribeSubmitLabel.textContent = 'Sync my stars';
       }
     });
   </script>
@@ -591,11 +603,49 @@ import ParticleBackground from '../components/ParticleBackground.astro';
       border-radius: 12px;
       padding: 15px;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
     button[type='submit']:disabled,
     #preview-submit-btn:disabled {
       opacity: 0.6;
       cursor: not-allowed;
+    }
+
+    /* Dot-loader shown inside the submit buttons while a request is in
+       flight — only visible once JS adds `.is-loading`, so it's invisible
+       by default and doesn't shift button layout when idle. */
+    .btn-loader {
+      display: none;
+      gap: 5px;
+    }
+    button.is-loading .btn-loader {
+      display: inline-flex;
+    }
+    .btn-loader span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: btn-dot-pulse 1s ease-in-out infinite;
+    }
+    .btn-loader span:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+    .btn-loader span:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+    @keyframes btn-dot-pulse {
+      0%, 80%, 100% {
+        opacity: 0.3;
+        transform: scale(0.7);
+      }
+      40% {
+        opacity: 1;
+        transform: scale(1);
+      }
     }
 
     .footnote {
