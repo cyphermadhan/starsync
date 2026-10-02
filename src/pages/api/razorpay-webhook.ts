@@ -105,6 +105,16 @@ export const POST: APIRoute = async ({ request }) => {
         );
       }
       await env.DB.batch(statements);
+
+      if (event === 'subscription.authenticated') {
+        // Mandate just got confirmed — send a welcome reading right away
+        // instead of making them wait for their chosen daily time slot.
+        // Reuses the exact same queue/consumer the daily cron does, so
+        // there's no duplicate content-generation code to maintain, and
+        // processSubscriber's own last_sent_date check still protects
+        // against a duplicate send if Razorpay retries this webhook.
+        await env.DAILY_SEND_QUEUE.send({ subscriberId: subscriber.id });
+      }
     }
   } catch (err) {
     console.error(`Razorpay webhook ${event} handling failed:`, err);

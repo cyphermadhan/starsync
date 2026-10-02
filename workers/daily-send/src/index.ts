@@ -15,6 +15,7 @@ interface SubscriberRow {
   nakshatra: string;
   pada: number;
   unsubscribe_token: string;
+  last_sent_date: string | null;
 }
 
 function todayUtcDateString(): string {
@@ -77,6 +78,15 @@ async function processSubscriber(subscriberId: string, env: Env): Promise<void> 
 
   if (!subscriber) {
     console.error(`Subscriber ${subscriberId} not found — skipping.`);
+    return;
+  }
+
+  // Guards against a duplicate send on the same day — the regular cron
+  // query already filters this, but the webhook-triggered "welcome"
+  // reading enqueues directly, bypassing that query, and Razorpay webhooks
+  // can be retried/delivered more than once.
+  if (subscriber.last_sent_date === todayUtcDateString()) {
+    console.log(`Subscriber ${subscriberId} already sent today — skipping duplicate.`);
     return;
   }
 

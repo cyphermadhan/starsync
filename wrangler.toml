@@ -15,6 +15,14 @@ name = "SIGNUP_RATE_LIMITER"
 namespace_id = "1001"
 simple = { limit = 5, period = 60 }
 
+# Lets the Razorpay webhook handler enqueue an immediate "welcome" reading
+# on subscription.authenticated, onto the exact same queue the daily cron
+# in workers/daily-send already consumes from — same binding name there too,
+# so this is just a second producer on one shared queue, not a new resource.
+[[queues.producers]]
+binding = "DAILY_SEND_QUEUE"
+queue = "starsync-daily-send"
+
 # Secret names are intentionally NOT declared here as [vars] placeholders —
 # that was tried once and is actively dangerous: deploying with a [vars]
 # entry whose name matches an existing Secret overwrites that Secret with
@@ -26,15 +34,13 @@ simple = { limit = 5, period = 60 }
 # which hand-declares these names for TypeScript without touching runtime
 # bindings in any way.
 
-# The daily-send pipeline (cron that queries D1 every 15 min + a queue
-# consumer that calls Claude/sends email) is not built yet — see plan.md.
-# Workers (unlike the now-unsupported Pages) can host Cron Triggers and
-# Queue consumers directly in this same project when that's built:
-#   starsync-daily-send (main queue), starsync-daily-send-dlq (dead-letter)
+# The daily-send pipeline (cron + queue consumer that calls OpenAI/sends
+# email) lives in its own separate Worker — workers/daily-send/wrangler.toml
+# — with its own build/deploy, not this project's.
 
 # Secrets (set with `wrangler secret put <NAME>`, never committed):
 # ENCRYPTION_KEY, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET,
-# RAZORPAY_PLAN_ID, RESEND_API_KEY, ANTHROPIC_API_KEY
+# RAZORPAY_PLAN_ID
 #
 # Rasi/Nakshatra are computed in-process (src/lib/vedic.ts) — no astrology
 # API or key needed.
