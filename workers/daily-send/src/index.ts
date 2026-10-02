@@ -259,7 +259,11 @@ async function processSubscriber(subscriberId: string, env: Env, reason?: 'authe
       try {
         const checkoutUrl = await ensureRazorpaySubscription(subscriber, email, name, env);
         const headline = daysSinceEnd === -2 ? 'Your free trial ends in 2 days' : 'Your free trial ends today';
-        nudgeHtml = buildNudgeBlock(checkoutUrl, headline, 'Add payment to keep your daily readings coming — no interruption.');
+        nudgeHtml = buildNudgeBlock(
+          checkoutUrl,
+          headline,
+          'Add payment to keep your daily readings coming — just ₹11.11/week, no interruption.',
+        );
       } catch (err) {
         // Non-fatal — the reading is the higher-priority deliverable; send
         // it without the nudge this time and let the next nudge day retry.
